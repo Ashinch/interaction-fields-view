@@ -10,10 +10,15 @@
   "prettier": "@geist-ui/prettier-config",
   "dependencies": {
     "@geist-ui/react": "^2.2.0",
+    "@geist-ui/react-icons": "^1.0.1",
     "axios": "^0.21.1",
     "http-proxy-middleware": "^2.0.1",
+    "i": "^0.3.6",
+    "npm": "^7.22.0",
     "react": "^17.0.2",
+    "react-cookies": "^0.1.1",
     "react-dom": "^17.0.2",
+    "react-prosemirror-editor-x": "^0.0.9",
     "react-router-dom": "^5.2.1",
     "react-scripts": "^4.0.3"
   },

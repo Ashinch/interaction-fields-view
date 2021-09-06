@@ -13,14 +13,14 @@ HTTP.interceptors.request.use(
     return config
   },
   (err) => {
-    console.log('请求超时')
+    console.error('请求超时', err)
     return Promise.reject(err)
   }
 )
 
 HTTP.interceptors.response.use(
   (data) => {
-    console.log(data)
+    console.info(data)
     if (data.data.code === 200) {
       return Promise.resolve(data.data)
     } else {
@@ -28,13 +28,7 @@ HTTP.interceptors.response.use(
     }
   },
   (err) => {
-    if (err.response.status === 504 || err.response.status === 404) {
-      console.log('服务器被吃了⊙﹏⊙∥', err)
-    } else if (err.response.status === 401) {
-      console.log('登录信息失效⊙﹏⊙∥', err)
-    } else if (err.response.status === 500) {
-      console.log('服务器开小差了⊙﹏⊙∥', err)
-    }
+    console.error(err)
     return Promise.reject(err)
   }
 )

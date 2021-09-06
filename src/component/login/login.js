@@ -29,9 +29,9 @@ const Login = ({isSMS, setUsername, setPassword}) => {
         </div>
       ) : (
         <div>
-          <Input scale={4 / 3} width="100%" placeholder="账号" onChange={e => setUsername(e.target.value)} />
+          <Input scale={4 / 3} width="100%" placeholder="账号" initialValue="a" onChange={e => setUsername(e.target.value)} />
           <Spacer h={.5} />
-          <Input.Password scale={4 / 3} width="100%" placeholder="密码" onChange={e => setPassword(e.target.value)} />
+          <Input.Password scale={4 / 3} width="100%" placeholder="密码" initialValue="123" onChange={e => setPassword(e.target.value)} />
         </div>
       )}
     </>

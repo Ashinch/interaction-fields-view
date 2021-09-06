@@ -1,5 +1,5 @@
-import { Session } from './Session'
-import { Meeting } from "./Meeting"
+import { Session } from './session'
+import { Meeting } from "./meeting"
 
 export class Model {
   static session = new Session()

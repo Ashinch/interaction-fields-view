@@ -1,4 +1,4 @@
-import { API, HTTP } from '../config/HTTP'
+import { API, HTTP } from '../config/http'
 
 export class Session {
   login = ({username, password, mobile, email}) => new Promise(((resolve, reject) => {
@@ -15,10 +15,14 @@ export class Session {
     })
   }))
 
-
   getInfo = () => JSON.parse(sessionStorage.getItem('sessionInfo'))
 
   setInfo = (data) => sessionStorage.setItem('sessionInfo', JSON.stringify(data))
 
   isLogin = () => JSON.parse(sessionStorage.getItem('sessionInfo')) !== null
+
+  isMe = (uuid) => {
+    console.log("uuid", uuid)
+    return this.getInfo()?.user?.uuid === uuid
+  }
 }
