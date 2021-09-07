@@ -13,7 +13,7 @@ import {
   Code, useModal
 } from '@geist-ui/react'
 import { useEffect, useState } from "react"
-import "../../util/bee.js"
+import "../util/bee.js"
 
 const Login = ({isSMS, setUsername, setPassword}) => {
   return (

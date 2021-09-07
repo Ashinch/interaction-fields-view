@@ -15,7 +15,7 @@ import {
 import { createRef, useRef, useState } from "react"
 import { useHistory, useRouteMatch } from "react-router-dom"
 import "../util/bee"
-import Login from "../component/login/login"
+import Login from "../component/login"
 import { Session } from "../model/session"
 import { Model } from "../model/model"
 

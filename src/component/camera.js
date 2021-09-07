@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { MicOff, CameraOff } from '@geist-ui/react-icons'
-import "../../util/bee.js"
+import "../util/bee.js"
 import { Button, Spacer } from "@geist-ui/react"
 
 const Camera = forwardRef(({isOneself, onMicChange, onCameraChange}, ref) => {

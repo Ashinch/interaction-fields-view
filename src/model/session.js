@@ -22,7 +22,6 @@ export class Session {
   isLogin = () => JSON.parse(sessionStorage.getItem('sessionInfo')) !== null
 
   isMe = (uuid) => {
-    console.log("uuid", uuid)
     return this.getInfo()?.user?.uuid === uuid
   }
 }
