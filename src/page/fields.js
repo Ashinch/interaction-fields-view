@@ -1,7 +1,7 @@
 import { Breadcrumbs, Button, Grid, Loading, Page, Select, Spacer, Tabs, Text, useToasts } from '@geist-ui/react'
 import { useEffect, useRef, useState } from "react"
 import "../util/bee"
-import { useParams } from "react-router-dom"
+import { useHistory, useParams } from "react-router-dom"
 import { Model } from "../model/model"
 import Camera from "../component/camera"
 import { Codepen, Edit, PlayFill } from '@geist-ui/react-icons'
@@ -28,159 +28,33 @@ import 'codemirror/mode/python/python.js'
 import 'codemirror/mode/perl/perl.js'
 import 'codemirror/mode/clike/clike.js'
 
-let socket = null
-let pc = null
-let rtcStream = null
-let editChange = null
-let codeMirrorRef = null
-let otherCameraRef = null
-let oneselfCameraRef = null
-let languageChange = null
-let isCreator
+import {
+  interactClose,
+  interactInit,
+  onOneselfCameraChange,
+  onOneselfMicChange,
+  rtcEvent,
+  send
+} from "../model/interact"
 
-// stun和turn服务器
-const iceServer = {
-  "iceServers": [{
-    "url": "stun:stun.l.google.com:19302"
-  }, {
-    "url": "turn:numb.viagenie.ca",
-    "username": "webrtc@live.com",
-    "credential": "muazkh"
-  }]
-}
-
-const rtcEvent = {
-  // newUser: "new_user",
-  iceCandidate: "_ice_candidate",
-  offer: "_offer",
-  answer: "_answer",
-  micChange: "mic_change",
-  cameraChange: "camera_change",
-  editChange: "edit_change",
-  languageChange: "language_change"
-}
-
-const send = (event, data) => {
-  socket.send(JSON.stringify({
-    "event": event,
-    "data": data
-  }))
-  console.log(`发送 ${event}`)
-}
-
-const socketInit = (code) => {
-  socket = new WebSocket(`wss://192.168.119.65:10004/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`)
-
-  socket.onopen = function () {
-    // if (isCreator == null) {
-    //   if (socket.readyState === 1) {
-    //     send(rtcEvent.newUser)
-    //   }
-    // }
-  }
-
-
-  //处理到来的信令
-  socket.onmessage = function (event) {
-    console.log('接收: ', event)
-    const json = JSON.parse(event.data)
-
-    switch (json.event) {
-      case rtcEvent.newUser:
-        // location.reload()
-        break
-      case rtcEvent.iceCandidate:
-        pc && pc.addIceCandidate(new RTCIceCandidate(json.data.candidate))
-        break
-      case rtcEvent.micChange:
-        otherCameraRef.current?.setMicOff(json.data)
-        break
-      case rtcEvent.cameraChange:
-        otherCameraRef.current?.setCameraOff(json.data)
-        break
-      case rtcEvent.editChange:
-        if (json.data.origin === '+input' || json.data.origin === 'paste' || json.data.origin === '+delete' || json.data.origin === 'undo') {
-          codeMirrorRef?.current?.editor.doc.replaceRange(json.data.text, json.data.from, json.data.to)
-        }
-        break
-      case rtcEvent.languageChange:
-        languageChange(json.data, false)
-        break
-      default:
-        pc && pc.setRemoteDescription(new RTCSessionDescription(json.data.sdp)).catch((error) => console.error('Failure callback: ' + error))
-        if (json.event === rtcEvent.offer) {
-          pc && pc.createAnswer((desc) => {
-            pc.setLocalDescription(desc)
-            if (socket.readyState === 1) {
-              send(rtcEvent.answer, {"sdp": desc})
-            }
-          }, (e) => console.error(`createAnswer: ${e}`))
-        }
-    }
-  }
-}
-
-const pcInit = () => {
-  pc = new RTCPeerConnection(iceServer)
-
-  // 发送ICE候选到其他客户端
-  pc.onicecandidate = function (event) {
-    if (event.candidate !== null) {
-      if (socket.readyState === 1) {
-        send(rtcEvent.iceCandidate, {"candidate": event.candidate})
-      }
-    }
-  }
-
-  // 如果检测到媒体流连接到本地，将其绑定到一个video标签上输出
-  pc.onaddstream = function (event) {
-    console.log("检测到媒体流连接到本地")
-    otherCameraRef.current?.setStream(event.stream)
-  }
-}
-
-const mediaInit = () => {
-// 获取本地音频和视频流
-//   navigator.getWebcam = (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.moxGetUserMedia ||
-//     navigator.mozGetUserMedia || navigator.msGetUserMedia)
-  navigator.getUserMedia({
-      // audio: true,
-      video: {width: 300, height: 300}
-    },
-    (stream) => {
-      rtcStream = stream
-      //绑定本地媒体流到video标签用于输出
-      oneselfCameraRef.current?.setStream(stream)
-      //向PeerConnection中加入需要发送的流
-      pc.addStream(stream)
-      //如果是发起方则发送一个offer信令
-      if (isCreator != null) {
-        pc.createOffer((desc) => {
-          // 发送offer和answer的函数，发送本地session描述
-          pc.setLocalDescription(desc)
-          if (socket.readyState === 1) {
-            send(rtcEvent.offer, {"sdp": desc})
-          }
-        }, (e) => console.error(`createOffer: ${e}`))
-      }
-    }, (error) => {
-      //处理媒体流创建失败错误
-      console.log('getUserMedia error: ' + error)
-    })
-}
-
+let width
 
 const Fields = () => {
+  const history = useHistory()
   const {code} = useParams()
   const [loading, setLoading] = useState(true)
-  const [editValue, setEditValue] = useState("")
-  const [codeStatus, setCodeStatus] = useState()
+  const [editValue, setEditValue] = useState("class a {\n" +
+    "    public static void main(String[] args) {\n" +
+    "        System.out.println(\"Hello world!\");\n" +
+    "    }\n" +
+    "}")
+  const [meetingStatus, setMeetingStatus] = useState()
   const [language, setLanguage] = useState("text/x-java")
   const [toasts, setToast] = useToasts()
 
-  otherCameraRef = useRef()
-  oneselfCameraRef = useRef()
-  codeMirrorRef = useRef()
+  const otherCameraRef = useRef()
+  const oneselfCameraRef = useRef()
+  const codeMirrorRef = useRef()
   const codeDivRef = useRef()
 
   useEffect(() => {
@@ -188,40 +62,65 @@ const Fields = () => {
     Model.meeting.codeStatus({
       code: code
     }).then((res) => {
-      console.log("then", res)
-      setCodeStatus(res.data)
+      setMeetingStatus(res.data)
       setLoading(false)
-      isCreator = Model.session.isMe(res.data.creatorUUID)
-      !socket && socketInit(code)
-      !pc && pcInit()
-      !rtcStream && mediaInit()
+
+      interactInit({
+        url: `wss://${res.data.ip}:${res.data.port}/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`,
+        isCreator: Model.session.isMe(res.data.creatorUUID),
+        onAddOneselfStream: onAddOneselfStream,
+        onAddOtherStream: onAddOtherStream,
+        onOtherMicChange: onOtherMicChange,
+        onOtherCameraChange: onOtherCameraChange,
+        onOtherEditChange: onOtherEditChange,
+        onOtherLanguageChange: onOtherLanguageChange,
+      })
+      width = document.getElementById("ss")?.clientWidth
 
     }).catch((err) => {
-      console.log("catch", err)
-      setToast({text: `${err.msg}`, type: "error", delay: 99999})
+      setToast({text: `${err.msg}`, type: "error"})
+      history.push("/")
     })
 
     return () => {
-      socket && socket.close()
-      pc && pc.close()
-      rtcStream && console.log(rtcStream.getTracks())
-      rtcStream && rtcStream.getTracks().forEach(i => i.stop())
+      interactClose()
     }
   }, [])
 
-  const onMicChange = () => {
-    rtcStream.getAudioTracks().forEach(i => i.enabled = oneselfCameraRef.current?.micOff)
-    if (socket.readyState === 1) {
-      send(rtcEvent.micChange, !oneselfCameraRef.current?.micOff)
+  const onAddOneselfStream = (stream) => {
+    oneselfCameraRef.current?.setStream(stream)
+  }
 
+  const onAddOtherStream = (stream) => {
+    otherCameraRef.current?.setStream(stream)
+  }
+
+  const onOneselfEditChange = (editor, data, value) => {
+    setEditValue(value)
+    send(rtcEvent.editChange, data)
+  }
+
+  const onOtherEditChange = (json) => {
+    if (json.data.origin === '+input' || json.data.origin === 'paste' || json.data.origin === '+delete' || json.data.origin === 'undo') {
+      codeMirrorRef?.current?.editor.doc.replaceRange(json.data.text, json.data.from, json.data.to)
     }
   }
 
-  const onCameraChange = () => {
-    rtcStream.getVideoTracks().forEach(i => i.enabled = oneselfCameraRef.current?.cameraOff)
-    if (socket.readyState === 1) {
-      send(rtcEvent.cameraChange, !oneselfCameraRef.current?.cameraOff)
-    }
+  const onOneselfLanguageChange = (e, isSend = true) => {
+    setLanguage(e)
+    isSend && send(rtcEvent.languageChange, e)
+  }
+
+  const onOtherLanguageChange = (json) => {
+    onOneselfLanguageChange(json.data, false)
+  }
+
+  const onOtherMicChange = (json) => {
+    otherCameraRef.current?.setMicOff(json.data)
+  }
+
+  const onOtherCameraChange = (json) => {
+    otherCameraRef.current?.setCameraOff(json.data)
   }
 
   const onRunClick = () => {
@@ -230,20 +129,7 @@ const Fields = () => {
       setToast({text: "请选出要运行的代码", type: "error"})
       return
     }
-    console.log(codeDivRef.current?.clientWidth, codeDivRef.current?.clientHeight)
-  }
-
-  editChange = (editor, data, value) => {
-    console.log(data)
-    setEditValue(value)
-    socket && send(rtcEvent.editChange, data)
-  }
-
-  languageChange = (e, isSend = true) => {
-    setLanguage(e)
-    if (socket.readyState === 1) {
-      isSend && send(rtcEvent.languageChange, e)
-    }
+    console.log(selectedValue)
   }
 
   return loading ? <Loading /> : (
@@ -258,9 +144,9 @@ const Fields = () => {
         <Grid.Container className="interaction-board" style={{width: "100%", height: "100%"}} direction={"row"}>
           <Grid.Container className="editor">
             <Grid.Container alignItems={"center"} direction={"row"} justify={"space-between"}>
-              <Text h3>TT的会议</Text>
+              <Text h3>{meetingStatus.title}</Text>
               <div style={{display: "flex", flexDirection: "row"}}>
-                <Select width="40px" height="40px" onChange={languageChange} value={language}>
+                <Select width="40px" height="40px" onChange={onOneselfLanguageChange} value={language}>
                   <Select.Option value="text">纯文本</Select.Option>
                   <Select.Option value="markdown">Markdown</Select.Option>
                   <Select.Option value="text/x-java">Java</Select.Option>
@@ -278,7 +164,7 @@ const Fields = () => {
               <Tabs initialValue="1">
                 <Tabs.Item label={<><Codepen />交互板</>} value="1" height="50px">
                   <Spacer h={1} />
-                  <div id="ss" ref={codeDivRef} style={{display: "flex", flex: "1"}}>
+                  <div id="ss" ref={codeDivRef} style={{display: "flex", flex: "1", height: "auto"}}>
                     <CodeMirror
                       ref={codeMirrorRef}
                       value={editValue}
@@ -295,10 +181,10 @@ const Fields = () => {
                         fixedGutter: true,
                         coverGutterNextToScrollbar: false
                       }}
-                      onBeforeChange={editChange}
+                      onBeforeChange={onOneselfEditChange}
                       spellcheck
                       editorDidMount={(editor) => {
-                        console.log(document.getElementById("ss").clientWidth)
+                        console.log(width)
                         editor.setSize(document.getElementById("ss").clientWidth, document.getElementById("ss").clientHeight)
                       }}
                     />
@@ -333,16 +219,16 @@ const Fields = () => {
             <h3>信息</h3>
             <Text>输出</Text>
             <div className="camera" style={{borderRadius: 50}}>
-              {Model.session.isMe(codeStatus?.creatorUUID) ? (<>
+              {Model.session.isMe(meetingStatus?.creatorUUID) ? (<>
                 <Camera ref={oneselfCameraRef}
-                        isOneself onMicChange={onMicChange}
-                        onCameraChange={onCameraChange} />
+                        isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
+                        onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
                 <Camera ref={otherCameraRef} />
               </>) : (<>
                 <Camera ref={otherCameraRef} />
                 <Camera ref={oneselfCameraRef}
-                        isOneself onMicChange={onMicChange}
-                        onCameraChange={onCameraChange} />
+                        isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
+                        onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
               </>)}
             </div>
           </Grid>
@@ -364,7 +250,7 @@ const Fields = () => {
           box-shadow: rgba(0, 0, 0, 0.12) 0 30px 60px;
           border-radius: 5px;
         }
-
+        
         .extra {
           flex: 1;
           display: flex;

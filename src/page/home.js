@@ -21,9 +21,9 @@ import { Model } from "../model/model"
 
 const Home = () => {
   const history = useHistory()
-  const [code, setCode] = useState()
-  const [username, setUsername] = useState()
-  const [password, setPassword] = useState()
+  const [code, setCode] = useState("T3O7BP")
+  const [username, setUsername] = useState("a")
+  const [password, setPassword] = useState("123")
   const [isSMS, setIsSMS] = useState()
   const [isLoginLoading, setIsLoginLoading] = useState()
   const {visible, setVisible, bindings} = useModal()

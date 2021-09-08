@@ -5,7 +5,7 @@ import { Button, Spacer } from "@geist-ui/react"
 
 const Camera = forwardRef(({isOneself, onMicChange, onCameraChange}, ref) => {
   const videoRef = useRef()
-  const [micOff, setMicOff] = useState(false)
+  const [micOff, setMicOff] = useState(true)
   const [cameraOff, setCameraOff] = useState(false)
 
   useImperativeHandle(ref, () => ({

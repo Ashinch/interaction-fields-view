@@ -5,7 +5,7 @@
   "proxy": "http://localhost:10000",
   "scripts": {
     "dev": "HTTPS=true SSL_CRT_FILE=./my_key_store.crt SSL_KEY_FILE=./my_store.key react-scripts start",
-    "build": "react-scripts build"
+    "build": "HTTPS=true SSL_CRT_FILE=./my_key_store.crt SSL_KEY_FILE=./my_store.key react-scripts build"
   },
   "prettier": "@geist-ui/prettier-config",
   "dependencies": {
