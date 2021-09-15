@@ -1,9 +1,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
-import { MicOff, CameraOff } from '@geist-ui/react-icons'
+import { MicOff, CameraOff, Mic, Camera} from '@geist-ui/react-icons'
 import "../util/bee.js"
 import { Button, Spacer } from "@geist-ui/react"
 
-const Camera = forwardRef(({isOneself, onMicChange, onCameraChange}, ref) => {
+const CameraView = forwardRef(({isOneself, onMicChange, onCameraChange}, ref) => {
   const videoRef = useRef()
   const [micOff, setMicOff] = useState(true)
   const [cameraOff, setCameraOff] = useState(false)
@@ -35,22 +35,23 @@ const Camera = forwardRef(({isOneself, onMicChange, onCameraChange}, ref) => {
   return (
     <>
       <div className="video">
-        <video ref={videoRef} autoPlay muted={isOneself} />
+        <video style={{border: "1px #eaeaea solid", borderRadius: 5, width: 289, height: 289, background: "black"}}
+               ref={videoRef} autoPlay muted={isOneself} />
         {isOneself ? (<div className="status">
           <div className={`control-icon ${cameraOff && "off"}`} onClick={onClickCameraOff}>
-            <CameraOff size={18} color="white" />
+            {cameraOff ? (<CameraOff size={18} color="white" />) : (<Camera size={18} color="white" />)}
           </div>
           <Spacer h={.5} />
           <div className={`control-icon ${micOff && "off"}`} onClick={onClickMicOff}>
-            <MicOff size={18} color="white" />
+            {micOff ? (<MicOff size={18} color="white" />) : (<Mic size={18} color="white" />)}
           </div>
         </div>) : (<div className="other-status">
           <div className={`control-icon ${micOff && "off"}`}>
-            <MicOff size={18} color="white" />
+            {micOff ? (<MicOff size={18} color="white" />) : (<Mic size={18} color="white" />)}
           </div>
           <Spacer h={.5} />
           <div className={`control-icon ${cameraOff && "off"}`}>
-            <CameraOff size={18} color="white" />
+            {cameraOff ? (<CameraOff size={18} color="white" />) : (<Camera size={18} color="white" />)}
           </div>
         </div>)}
       </div>
@@ -60,7 +61,7 @@ const Camera = forwardRef(({isOneself, onMicChange, onCameraChange}, ref) => {
           border-radius: 100px;
           width: 30px;
           height: 30px;
-          background: limegreen;
+          background: #0070f3;
           display: flex;
           justify-content: center;
           align-items: center;
@@ -72,10 +73,9 @@ const Camera = forwardRef(({isOneself, onMicChange, onCameraChange}, ref) => {
         }
 
         .video {
+          height: 289px;
+          width: 289px;
           position: relative;
-          background: black;
-          width: 300px;
-          height: 300px;
         }
 
         .status {
@@ -103,4 +103,4 @@ const Camera = forwardRef(({isOneself, onMicChange, onCameraChange}, ref) => {
   )
 })
 
-export default Camera
+export default CameraView

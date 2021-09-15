@@ -20,7 +20,8 @@ export const rtcEvent = {
   micChange: "mic_change",
   cameraChange: "camera_change",
   editChange: "edit_change",
-  languageChange: "language_change"
+  languageChange: "language_change",
+  judgeResultReceive: "judge_result_receive"
 }
 
 export const interactInit = ({
@@ -31,9 +32,12 @@ export const interactInit = ({
                                onOtherMicChange,
                                onOtherCameraChange,
                                onOtherEditChange,
-                               onOtherLanguageChange
+                               onOtherLanguageChange,
+                               onJudgeResultReceive
                              }) => {
   ws = new WebSocket(url)
+  //MozWebSocket
+
 
   // socket.onopen = () => onOpen && onOpen()
 
@@ -56,6 +60,9 @@ export const interactInit = ({
         break
       case rtcEvent.languageChange:
         onOtherLanguageChange && onOtherLanguageChange(json)
+        break
+      case rtcEvent.judgeResultReceive:
+        onJudgeResultReceive && onJudgeResultReceive(json)
         break
       default:
         pc && pc.setRemoteDescription(new RTCSessionDescription(json.data.sdp)).catch((error) => console.error('Failure callback: ' + error))
@@ -84,7 +91,7 @@ export const interactInit = ({
 
   navigator.getUserMedia({
       audio: true,
-      video: {width: 300, height: 300}
+      video: {width: 289, height: 289}
     },
     (stream) => {
       console.info("onAddOneselfStream")
@@ -115,12 +122,12 @@ export const send = (event, data) => {
 }
 
 export const onOneselfMicChange = (enabled) => {
-  rtcStream.getAudioTracks().forEach(i => i.enabled = enabled)
+  rtcStream && rtcStream.getAudioTracks().forEach(i => i.enabled = enabled)
   send(rtcEvent.micChange, !enabled)
 }
 
 export const onOneselfCameraChange = (enabled) => {
-  rtcStream.getVideoTracks().forEach(i => i.enabled = enabled)
+  rtcStream && rtcStream.getVideoTracks().forEach(i => i.enabled = enabled)
   send(rtcEvent.cameraChange, !enabled)
 }
 

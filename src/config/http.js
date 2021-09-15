@@ -37,5 +37,6 @@ export const API = {
   userLogin: '/user-service/login',
   userSignUp: '/user-service/signUp',
   meetingCreate: '/meeting-service/create',
-  meetingCodeStatus: '/meeting-service/codeStatus/',
+  meetingStatusByCode: '/meeting-service/statusByCode/',
+  judgeCommit: '/judge-service/commit',
 }

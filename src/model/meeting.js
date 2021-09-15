@@ -1,9 +1,9 @@
 import { API, HTTP } from '../config/http'
 
 export class Meeting {
-  codeStatus = ({code}) => new Promise(((resolve, reject) => {
+  statusByCode = ({code}) => new Promise(((resolve, reject) => {
     HTTP.get(
-      API.meetingCodeStatus + code
+      API.meetingStatusByCode + code
     ).then(res => {
       resolve && resolve(res)
     }).catch(err => {

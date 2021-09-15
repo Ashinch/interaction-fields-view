@@ -1,10 +1,25 @@
-import { Breadcrumbs, Button, Grid, Loading, Page, Select, Spacer, Tabs, Text, useToasts } from '@geist-ui/react'
+import {
+  Breadcrumbs,
+  Button,
+  Grid,
+  Loading,
+  Page,
+  Select,
+  Spacer,
+  Spinner,
+  Tabs,
+  Text,
+  useToasts,
+  Card,
+  Avatar,
+  Divider, Toggle, Slider
+} from '@geist-ui/react'
 import { useEffect, useRef, useState } from "react"
 import "../util/bee"
 import { useHistory, useParams } from "react-router-dom"
 import { Model } from "../model/model"
-import Camera from "../component/camera"
-import { Codepen, Edit, PlayFill } from '@geist-ui/react-icons'
+import CameraView from "../component/cameraView"
+import { Codepen, FileText, PlayFill, Clock, MicOff, CameraOff, Camera, Volume2 } from '@geist-ui/react-icons'
 
 import { Controlled as CodeMirror } from "react-codemirror2"
 import "codemirror/lib/codemirror"
@@ -36,6 +51,7 @@ import {
   rtcEvent,
   send
 } from "../model/interact"
+import Mic from "@geist-ui/react-icons/mic"
 
 let width
 
@@ -43,7 +59,7 @@ const Fields = () => {
   const history = useHistory()
   const {code} = useParams()
   const [loading, setLoading] = useState(true)
-  const [editValue, setEditValue] = useState("class a {\n" +
+  const [editValue, setEditValue] = useState("class Main {\n" +
     "    public static void main(String[] args) {\n" +
     "        System.out.println(\"Hello world!\");\n" +
     "    }\n" +
@@ -59,7 +75,7 @@ const Fields = () => {
 
   useEffect(() => {
     setLoading(true)
-    Model.meeting.codeStatus({
+    Model.meeting.statusByCode({
       code: code
     }).then((res) => {
       setMeetingStatus(res.data)
@@ -74,11 +90,12 @@ const Fields = () => {
         onOtherCameraChange: onOtherCameraChange,
         onOtherEditChange: onOtherEditChange,
         onOtherLanguageChange: onOtherLanguageChange,
+        onJudgeResultReceive: onJudgeResultReceive
       })
       width = document.getElementById("ss")?.clientWidth
 
     }).catch((err) => {
-      setToast({text: `${err.msg}`, type: "error"})
+      setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
       history.push("/")
     })
 
@@ -129,10 +146,22 @@ const Fields = () => {
       setToast({text: "请选出要运行的代码", type: "error"})
       return
     }
-    console.log(selectedValue)
+    console.log("onRunClick", selectedValue)
+    Model.judge.commit({code:selectedValue, meetingUUID: meetingStatus.uuid})
+      .then((res) => {
+        console.log(res)
+      })
+      .catch((err) => {
+        console.log(err)
+      })
   }
 
-  return loading ? <Loading /> : (
+  const onJudgeResultReceive = (json) => {
+    console.log("onJudgeResultReceive", json)
+    setToast({text: json.data.result, type: json.data.status.id === 1 ? "success" : "error"})
+  }
+
+  return loading ? <Page><Spinner style={{position: "absolute", top: "50%", left: "50%"}} /></Page> : (
     <Page dotBackdrop>
       <Page.Header>
         <Breadcrumbs>
@@ -140,11 +169,11 @@ const Fields = () => {
           <Breadcrumbs.Item>Fields</Breadcrumbs.Item>
         </Breadcrumbs>
       </Page.Header>
-      <Page.Content>
+      <Page.Content style={{flex: 1}}>
         <Grid.Container className="interaction-board" style={{width: "100%", height: "100%"}} direction={"row"}>
           <Grid.Container className="editor">
             <Grid.Container alignItems={"center"} direction={"row"} justify={"space-between"}>
-              <Text h3>{meetingStatus.title}</Text>
+              <Text h3 style={{fontSize: 32, margin: 0}}>{meetingStatus.title}</Text>
               <div style={{display: "flex", flexDirection: "row"}}>
                 <Select width="40px" height="40px" onChange={onOneselfLanguageChange} value={language}>
                   <Select.Option value="text">纯文本</Select.Option>
@@ -185,12 +214,12 @@ const Fields = () => {
                       spellcheck
                       editorDidMount={(editor) => {
                         console.log(width)
-                        editor.setSize(document.getElementById("ss").clientWidth, document.getElementById("ss").clientHeight)
+                        // editor.setSize(document.getElementById("ss").clientWidth, document.getElementById("ss").clientHeight)
                       }}
                     />
                   </div>
                 </Tabs.Item>
-                <Tabs.Item label={<><Edit />笔记</>} value="2" height="50px">
+                <Tabs.Item label={<><FileText />笔记</>} value="2" height="50px">
                   <Spacer h={1} />
                   <div style={{maxWidth: 951, maxHeight: 700}}>
                     {/*<CodeMirror*/}
@@ -211,32 +240,98 @@ const Fields = () => {
                     {/*/>*/}
                   </div>
                 </Tabs.Item>
+                <Tabs.Item label={<><Clock />编译记录</>} value="3" height="50px"></Tabs.Item>
               </Tabs>
             </Grid>
           </Grid.Container>
           <Spacer w={2} />
           <Grid className="extra">
-            <h3>信息</h3>
-            <Text>输出</Text>
+            <Grid.Container justify="space-between" alignItems="center">
+              <Text h3 style={{fontSize: 32, marginBottom: 0}}>信息</Text>
+              <Avatar.Group count={2}>
+                <Avatar text="刘" stacked />
+                <Avatar text="Ana" stacked />
+              </Avatar.Group>
+            </Grid.Container>
+            <Spacer h="24px" />
+
+            <Grid.Container gap={2}>
+              <Grid style={{flex: 1}}>
+                <div style={{
+                  height: 50,
+                  display: "flex",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  borderRadius: 5,
+                  background: "black",
+                  color: "white",
+                  padding: "0 12px"
+                }}>
+                  <Text b style={{fontSize: 16}}>面试官</Text>
+                  <span style={{fontSize: 12}}>已加入</span>
+                </div>
+              </Grid>
+              <Grid style={{flex: 1}}>
+                <div style={{
+                  height: 50,
+                  display: "flex",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  borderRadius: 5,
+                  background: "#fafafa",
+                  color: "#cccccc",
+                  border: "1px #EAEAEA solid",
+                  padding: "0 12px"
+                }}>
+                  <Text b style={{fontSize: 16}}>候选人</Text>
+                  <span style={{fontSize: 12}}>未加入</span>
+                </div>
+              </Grid>
+            </Grid.Container>
+            <Spacer h="24px" />
             <div className="camera" style={{borderRadius: 50}}>
               {Model.session.isMe(meetingStatus?.creatorUUID) ? (<>
-                <Camera ref={oneselfCameraRef}
-                        isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
-                        onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
-                <Camera ref={otherCameraRef} />
+                <CameraView cssStyle={{zIndex: 1, height: 100, width: 100}} ref={oneselfCameraRef}
+                            isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
+                            onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
+                <Spacer w="24px" />
+                <CameraView cssStyle={{position: "absolute", top: 0, right: 0, left: 0, bottom: 0}}
+                            ref={otherCameraRef} />
               </>) : (<>
-                <Camera ref={otherCameraRef} />
-                <Camera ref={oneselfCameraRef}
-                        isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
-                        onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
+                <CameraView ref={otherCameraRef} />
+                <Spacer w="24px" />
+                <CameraView ref={oneselfCameraRef}
+                            isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
+                            onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
               </>)}
             </div>
+            <Spacer h="24px" />
+            <Grid.Container gap={2}>
+              <Grid style={{flex: 1}}>
+                <Card>
+                  <div style={{display: "flex", alignItems: "center"}}>
+                    <Camera /><Spacer w={1} />
+                    <Volume2 /><Spacer w={1.5} />
+                    <Slider h={1.5} width="60%" initialValue={100} />
+                  </div>
+                </Card>
+              </Grid>
+              <Grid style={{flex: 1}}>
+                <Card>
+                  <div style={{display: "flex", alignItems: "center"}}>
+                    <Camera /><Spacer w={1} />
+                    <Mic /><Spacer w={1.5} />
+                    <Slider h={1.5} width="60%" initialValue={100} />
+                  </div>
+                </Card>
+              </Grid>
+            </Grid.Container>
+            <Divider style={{margin: "24px 0"}} />
           </Grid>
         </Grid.Container>
       </Page.Content>
-      <Page.Footer>
-
-      </Page.Footer>
       <style jsx="true">{`
         .interaction-board {
         }
@@ -250,25 +345,20 @@ const Fields = () => {
           box-shadow: rgba(0, 0, 0, 0.12) 0 30px 60px;
           border-radius: 5px;
         }
-        
+
         .extra {
-          flex: 1;
           display: flex;
           flex-direction: column;
           background: white;
           padding: 24px;
           box-shadow: rgba(0, 0, 0, 0.12) 0 30px 60px;
           border-radius: 5px;
+          width: 650px;
         }
 
         .camera {
-          //display: flex;
-          //flex-direction: column;
-          //justify-content: center;
-          //align-items: center;
-          //background: lightskyblue;
-          //box-shadow: rgba(0, 0, 0, 0.12) 0px 30px 30px;
-          border-radius: 5px;
+          display: flex;
+          flex-direction: row;
         }
       `}</style>
     </Page>

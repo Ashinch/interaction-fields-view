@@ -39,7 +39,7 @@ const Home = () => {
     }).then((res) => {
       location.reload()
     }).catch((err) => {
-      setToast({text: `${err.msg}`, type: "error"})
+      setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
     }).finally(() => {
       setIsLoginLoading(false)
     })
@@ -48,12 +48,12 @@ const Home = () => {
   const enterMeeting = () => {
     console.log(code)
     if (Bee.StringUtils.isNotBlank(code)) {
-      Model.meeting.codeStatus({
+      Model.meeting.statusByCode({
         code: Bee.StringUtils.trim(code)
       }).then((res) => {
         history.push(`/fields/${Bee.StringUtils.trim(code)}`)
       }).catch((err) => {
-        setToast({text: `${err.msg}`, type: "error"})
+        setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
       })
     }
   }
