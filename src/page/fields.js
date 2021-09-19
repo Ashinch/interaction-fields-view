@@ -12,7 +12,7 @@ import {
   useToasts,
   Card,
   Avatar,
-  Divider, Toggle, Slider
+  Divider, Toggle, Slider, Table
 } from '@geist-ui/react'
 import { useEffect, useRef, useState } from "react"
 import "../util/bee"
@@ -52,6 +52,7 @@ import {
   send
 } from "../model/interact"
 import Mic from "@geist-ui/react-icons/mic"
+import CompileRecord from "../component/compileRecord"
 
 let width
 
@@ -240,7 +241,10 @@ const Fields = () => {
                     {/*/>*/}
                   </div>
                 </Tabs.Item>
-                <Tabs.Item label={<><Clock />编译记录</>} value="3" height="50px"></Tabs.Item>
+                <Tabs.Item label={<><Clock />编译记录</>} value="3" height="50px">
+                  <Spacer h={1} />
+                  <CompileRecord meetingUUID={meetingStatus.uuid} />
+                </Tabs.Item>
               </Tabs>
             </Grid>
           </Grid.Container>

@@ -11,4 +11,14 @@ export class Judge {
       reject && reject(err)
     })
   }))
+
+  record = ({meetingUUID}) => new Promise(((resolve, reject) => {
+    HTTP.post(API.judgeRecord, {
+      meetingUUID: meetingUUID,
+    }).then(res => {
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    })
+  }))
 }

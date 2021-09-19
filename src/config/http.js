@@ -39,4 +39,5 @@ export const API = {
   meetingCreate: '/meeting-service/create',
   meetingStatusByCode: '/meeting-service/statusByCode/',
   judgeCommit: '/judge-service/commit',
+  judgeRecord: '/judge-service/record',
 }
