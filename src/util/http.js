@@ -5,6 +5,7 @@ export const HTTP = axios.create()
 
 HTTP.interceptors.request.use(
   (config) => {
+    console.log(config)
     config.headers = {
       'content-type': 'application/x-www-form-urlencoded;charset=utf-8',
       'Authorization': sessionStorage.getItem('sessionInfo') && "Bearer " + JSON.parse(sessionStorage.getItem('sessionInfo'))?.jwt?.access_token
@@ -33,11 +34,13 @@ HTTP.interceptors.response.use(
   }
 )
 
+const PREFIX = '/api'
+
 export const API = {
-  userLogin: '/user-service/login',
-  userSignUp: '/user-service/signUp',
-  meetingCreate: '/meeting-service/create',
-  meetingStatusByCode: '/meeting-service/statusByCode/',
-  judgeCommit: '/judge-service/commit',
-  judgeRecord: '/judge-service/record',
+  userLogin: PREFIX + '/user-service/login',
+  userSignUp: PREFIX + '/user-service/signUp',
+  meetingCreate: PREFIX + '/meeting-service/create',
+  meetingStatusByCode: PREFIX + '/meeting-service/statusByCode/',
+  judgeCommit: PREFIX + '/judge-service/commit',
+  judgeRecord: PREFIX + '/judge-service/record',
 }

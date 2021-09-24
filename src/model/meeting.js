@@ -1,4 +1,4 @@
-import { API, HTTP } from '../config/http'
+import { API, HTTP } from '../util/http'
 
 export class Meeting {
   statusByCode = ({code}) => new Promise(((resolve, reject) => {

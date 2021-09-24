@@ -2,10 +2,9 @@
   "name": "interaction-fields",
   "version": "0.1.0",
   "license": "MIT",
-  "proxy": "http://localhost:10000",
   "scripts": {
     "dev": "HTTPS=true SSL_CRT_FILE=./my_key_store.crt SSL_KEY_FILE=./my_store.key react-scripts start",
-    "build": "HTTPS=true SSL_CRT_FILE=./my_key_store.crt SSL_KEY_FILE=./my_store.key react-scripts build"
+    "build": "react-scripts build"
   },
   "prettier": "@geist-ui/prettier-config",
   "dependencies": {

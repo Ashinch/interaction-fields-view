@@ -1,4 +1,4 @@
-import { API, HTTP } from '../config/http'
+import { API, HTTP } from '../util/http'
 
 export class Session {
   login = ({username, password, mobile, email}) => new Promise(((resolve, reject) => {

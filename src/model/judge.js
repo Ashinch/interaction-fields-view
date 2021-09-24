@@ -1,4 +1,4 @@
-import { API, HTTP } from '../config/http'
+import { API, HTTP } from '../util/http'
 
 export class Judge {
   commit = ({code, meetingUUID}) => new Promise(((resolve, reject) => {
