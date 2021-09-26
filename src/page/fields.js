@@ -55,6 +55,15 @@ import Mic from "@geist-ui/react-icons/mic"
 import CompileRecord from "../component/compileRecord"
 
 let width
+const editorLang = [
+  "text",
+  "text/x-java",
+  "text/x-cython",
+  "text/x-cython",
+  "text/javascript",
+  "text/x-csrc",
+  "text/x-c++src",
+]
 
 const Fields = () => {
   const history = useHistory()
@@ -66,7 +75,8 @@ const Fields = () => {
     "    }\n" +
     "}")
   const [meetingStatus, setMeetingStatus] = useState()
-  const [language, setLanguage] = useState("text/x-java")
+  const [typeID, setTypeID] = useState(1)
+  const [language, setLanguage] = useState(editorLang[typeID])
   const [toasts, setToast] = useToasts()
 
   const otherCameraRef = useRef()
@@ -79,6 +89,7 @@ const Fields = () => {
     Model.meeting.statusByCode({
       code: code
     }).then((res) => {
+      res.data.attachmentType.map((item) => item.name = item.name.split("/")[1])
       setMeetingStatus(res.data)
       setLoading(false)
 
@@ -125,7 +136,9 @@ const Fields = () => {
   }
 
   const onOneselfLanguageChange = (e, isSend = true) => {
-    setLanguage(e)
+    console.log(e)
+    setLanguage(editorLang[e])
+    setTypeID(e)
     isSend && send(rtcEvent.languageChange, e)
   }
 
@@ -148,7 +161,7 @@ const Fields = () => {
       return
     }
     console.log("onRunClick", selectedValue)
-    Model.judge.commit({code:selectedValue, meetingUUID: meetingStatus.uuid})
+    Model.judge.commit({meetingUUID: meetingStatus.uuid, typeID: typeID, code: selectedValue})
       .then((res) => {
         console.log(res)
       })
@@ -159,7 +172,7 @@ const Fields = () => {
 
   const onJudgeResultReceive = (json) => {
     console.log("onJudgeResultReceive", json)
-    setToast({text: json.data.result, type: json.data.status.id === 1 ? "success" : "error"})
+    setToast({text: json.data.result, type: json.data.status.id === 1 ? "success" : "error", delay: 5000})
   }
 
   return loading ? <Page><Spinner style={{position: "absolute", top: "50%", left: "50%"}} /></Page> : (
@@ -176,14 +189,13 @@ const Fields = () => {
             <Grid.Container alignItems={"center"} direction={"row"} justify={"space-between"}>
               <Text h3 style={{fontSize: 32, margin: 0}}>{meetingStatus.title}</Text>
               <div style={{display: "flex", flexDirection: "row"}}>
-                <Select width="40px" height="40px" onChange={onOneselfLanguageChange} value={language}>
-                  <Select.Option value="text">纯文本</Select.Option>
-                  <Select.Option value="markdown">Markdown</Select.Option>
-                  <Select.Option value="text/x-java">Java</Select.Option>
-                  <Select.Option value="text/x-csrc">C</Select.Option>
-                  <Select.Option value="text/x-c++src">C++</Select.Option>
-                  <Select.Option value="text/javascript">JavaScript</Select.Option>
-                  <Select.Option value="text/x-cython">Python</Select.Option>
+                <Select width="40px" height="40px"
+                        onChange={onOneselfLanguageChange}
+                        initialValue={typeID.toString()}
+                        value={typeID.toString()}>
+                  {meetingStatus.attachmentType?.map((item) => {
+                    return <Select.Option key={item.id} value={item.id.toString()}>{item.name}</Select.Option>
+                  })}
                 </Select>
                 <Spacer w={1} />
                 <Button auto type="success-light" shadow iconRight={<PlayFill />} onClick={onRunClick}>运行</Button>

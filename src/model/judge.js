@@ -1,10 +1,11 @@
 import { API, HTTP } from '../util/http'
 
 export class Judge {
-  commit = ({code, meetingUUID}) => new Promise(((resolve, reject) => {
+  commit = ({meetingUUID, typeID, code}) => new Promise(((resolve, reject) => {
     HTTP.post(API.judgeCommit, {
-      code: code,
       meetingUUID: meetingUUID,
+      typeID: typeID,
+      code: code,
     }).then(res => {
       resolve && resolve(res)
     }).catch(err => {
