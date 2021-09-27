@@ -43,4 +43,6 @@ export const API = {
   meetingStatusByCode: PREFIX + '/meeting-service/statusByCode/',
   judgeCommit: PREFIX + '/judge-service/commit',
   judgeRecord: PREFIX + '/judge-service/record',
+  judgeBinary: PREFIX + '/judge-service/binary/',
+  judgeResult: PREFIX + '/judge-service/result/',
 }

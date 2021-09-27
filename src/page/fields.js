@@ -172,7 +172,12 @@ const Fields = () => {
 
   const onJudgeResultReceive = (json) => {
     console.log("onJudgeResultReceive", json)
-    setToast({text: json.data.result, type: json.data.status.id === 1 ? "success" : "error", delay: 5000})
+    let result = json.data.status.id === 1 ? "success" : "error"
+    setToast({
+      text: json.data.result ? json.data.result : result,
+      type: result,
+      delay: 5000
+    })
   }
 
   return loading ? <Page><Spinner style={{position: "absolute", top: "50%", left: "50%"}} /></Page> : (
@@ -253,7 +258,7 @@ const Fields = () => {
                     {/*/>*/}
                   </div>
                 </Tabs.Item>
-                <Tabs.Item label={<><Clock />编译记录</>} value="3" height="50px">
+                <Tabs.Item label={<><Clock />运行记录</>} value="3" height="50px">
                   <Spacer h={1} />
                   <CompileRecord meetingUUID={meetingStatus.uuid} />
                 </Tabs.Item>

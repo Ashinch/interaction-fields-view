@@ -13,10 +13,32 @@ export class Judge {
     })
   }))
 
-  record = ({meetingUUID}) => new Promise(((resolve, reject) => {
+  record = ({meetingUUID, pageNum, pageSize}) => new Promise(((resolve, reject) => {
     HTTP.post(API.judgeRecord, {
       meetingUUID: meetingUUID,
+      pageNum: pageNum,
+      pageSize: pageSize,
     }).then(res => {
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    })
+  }))
+
+  binary = ({attachmentUUID}) => new Promise(((resolve, reject) => {
+    HTTP.get(
+      API.judgeBinary + attachmentUUID
+    ).then(res => {
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    })
+  }))
+
+  result = ({attachmentUUID}) => new Promise(((resolve, reject) => {
+    HTTP.get(
+      API.judgeResult + attachmentUUID
+    ).then(res => {
       resolve && resolve(res)
     }).catch(err => {
       reject && reject(err)
