@@ -155,13 +155,13 @@ const Fields = () => {
   }
 
   const onRunClick = () => {
+    let code = editValue
     const selectedValue = codeMirrorRef?.current?.editor.getSelection()
-    if (Bee.StringUtils.isBlank(selectedValue)) {
-      setToast({text: "请选出要运行的代码", type: "error"})
-      return
+    if (Bee.StringUtils.isNotBlank(selectedValue)) {
+      code = selectedValue
     }
     console.log("onRunClick", selectedValue)
-    Model.judge.commit({meetingUUID: meetingStatus.uuid, typeID: typeID, code: selectedValue})
+    Model.judge.commit({meetingUUID: meetingStatus.uuid, typeID: typeID, code: code})
       .then((res) => {
         console.log(res)
       })
@@ -314,12 +314,11 @@ const Fields = () => {
             <Spacer h="24px" />
             <div className="camera" style={{borderRadius: 50}}>
               {Model.session.isMe(meetingStatus?.creatorUUID) ? (<>
-                <CameraView cssStyle={{zIndex: 1, height: 100, width: 100}} ref={oneselfCameraRef}
+                <CameraView ref={oneselfCameraRef}
                             isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
                             onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
                 <Spacer w="24px" />
-                <CameraView cssStyle={{position: "absolute", top: 0, right: 0, left: 0, bottom: 0}}
-                            ref={otherCameraRef} />
+                <CameraView ref={otherCameraRef} />
               </>) : (<>
                 <CameraView ref={otherCameraRef} />
                 <Spacer w="24px" />
@@ -328,27 +327,6 @@ const Fields = () => {
                             onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
               </>)}
             </div>
-            <Spacer h="24px" />
-            <Grid.Container gap={2}>
-              <Grid style={{flex: 1}}>
-                <Card>
-                  <div style={{display: "flex", alignItems: "center"}}>
-                    <Camera /><Spacer w={1} />
-                    <Volume2 /><Spacer w={1.5} />
-                    <Slider h={1.5} width="60%" initialValue={100} />
-                  </div>
-                </Card>
-              </Grid>
-              <Grid style={{flex: 1}}>
-                <Card>
-                  <div style={{display: "flex", alignItems: "center"}}>
-                    <Camera /><Spacer w={1} />
-                    <Mic /><Spacer w={1.5} />
-                    <Slider h={1.5} width="60%" initialValue={100} />
-                  </div>
-                </Card>
-              </Grid>
-            </Grid.Container>
             <Divider style={{margin: "24px 0"}} />
           </Grid>
         </Grid.Container>
