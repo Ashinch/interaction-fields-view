@@ -32,9 +32,13 @@ const CompileRecord = ({meetingUUID}) => {
       res.data.records.map((item) => {
         item.uuidTrim = item.uuid.split("-")[0].toUpperCase()
         item.language = item.type.name.split("/")[1]
-        item.statusFormat = <font color={item.status.id === 1 ? "green" : "red"}>{item.status.name}</font>
-        item.commit = <a  onClick={() => onBinaryClick(item)}>查看</a>
-        item.output = <a  onClick={() => onResultClick(item)}>查看</a>
+        item.cpuTime = item.cpuTime ? item.cpuTime + " ms" : "0 ms"
+        item.realTime = item.realTime ? item.realTime + " ms" : "0 ms"
+        const memory = item.memory / 1024
+        item.memory = memory.toString().length < 4 ? memory + " KB" : (memory / 1024).toFixed(1) + " MB"
+        item.status && (item.statusFormat = <font color={item.status.id === 1 ? "green" : "red"}>{item.status.name}</font>)
+        item.commit = <a onClick={() => onBinaryClick(item)}>查看</a>
+        item.output = <a onClick={() => onResultClick(item)}>查看</a>
       })
       setRecords(res.data.records)
       setTotal(res.data.total)
@@ -53,8 +57,8 @@ const CompileRecord = ({meetingUUID}) => {
     Model.judge.binary({
       attachmentUUID: item.uuid
     }).then((res) => {
-      setModalTitle(`源代码 | ${item.uuidTrim}`)
-      setModalSubTitle(`目标语言：${item.language} | 耗时：500ms | 状态：${item.status.name}`)
+      setModalTitle("提交代码")
+      setModalSubTitle(item.uuidTrim)
       setModalContent(res.data)
       setShowModal(true)
     })
@@ -64,8 +68,8 @@ const CompileRecord = ({meetingUUID}) => {
     Model.judge.result({
       attachmentUUID: item.uuid
     }).then((res) => {
-      setModalTitle(`输出信息 | ${item.uuidTrim}`)
-      setModalSubTitle(`目标语言：${item.language} | 耗时：500ms | 状态：${item.status.name}`)
+      setModalTitle("输出信息")
+      setModalSubTitle(item.uuidTrim)
       setModalContent(res.data)
       setShowModal(true)
     })
@@ -78,12 +82,14 @@ const CompileRecord = ({meetingUUID}) => {
   return loading ? <Spinner style={{position: "relative", top: 100, left: "50%"}} /> : (
     <>
       <Table data={records}>
-        <Table.Column prop="uuidTrim" label="#" />
+        <Table.Column prop="uuidTrim" label="编号" />
         <Table.Column prop="createAt" label="提交时间" />
         <Table.Column prop="language" label="目标语言" />
+        <Table.Column prop="cpuTime" label="CPU用时" />
+        <Table.Column prop="realTime" label="执行用时" />
+        <Table.Column prop="memory" label="内存消耗" />
         <Table.Column prop="statusFormat" label="状态" />
-        <Table.Column prop="elapsedTime" label="耗时（毫秒）" />
-        <Table.Column prop="commit" label="源代码" />
+        <Table.Column prop="commit" label="提交代码" />
         <Table.Column prop="output" label="输出信息" />
       </Table>
       <Spacer h={1} />
@@ -97,7 +103,7 @@ const CompileRecord = ({meetingUUID}) => {
         <Modal.Title>{modalTitle}</Modal.Title>
         <Modal.Subtitle>{modalSubTitle}</Modal.Subtitle>
         <Modal.Content>
-          <Textarea initialValue={modalContent} width="100%" height="200px"/>
+          <Textarea initialValue={modalContent} width="100%" height="200px" />
         </Modal.Content>
       </Modal>
       <style jsx="true">{`

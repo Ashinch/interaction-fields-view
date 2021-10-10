@@ -1,25 +1,23 @@
 import {
+  Avatar,
   Breadcrumbs,
   Button,
+  Divider,
   Grid,
-  Loading,
   Page,
   Select,
   Spacer,
   Spinner,
   Tabs,
   Text,
-  useToasts,
-  Card,
-  Avatar,
-  Divider, Toggle, Slider, Table
+  useToasts
 } from '@geist-ui/react'
 import { useEffect, useRef, useState } from "react"
 import "../util/bee"
 import { useHistory, useParams } from "react-router-dom"
 import { Model } from "../model/model"
 import CameraView from "../component/cameraView"
-import { Codepen, FileText, PlayFill, Clock, MicOff, CameraOff, Camera, Volume2 } from '@geist-ui/react-icons'
+import { Clock, Codepen, FileText, PlayFill } from '@geist-ui/react-icons'
 
 import { Controlled as CodeMirror } from "react-codemirror2"
 import "codemirror/lib/codemirror"
@@ -51,7 +49,6 @@ import {
   rtcEvent,
   send
 } from "../model/interact"
-import Mic from "@geist-ui/react-icons/mic"
 import CompileRecord from "../component/compileRecord"
 
 let width
@@ -172,10 +169,12 @@ const Fields = () => {
 
   const onJudgeResultReceive = (json) => {
     console.log("onJudgeResultReceive", json)
-    let result = json.data.status.id === 1 ? "success" : "error"
+    let result = json.data?.statusCode === 1
     setToast({
-      text: json.data.result ? json.data.result : result,
-      type: result,
+      text: result
+        ? "运行完成" + (json.data.result ? ": " + json.data.result : "")
+        : "运行失败" + (json.data.result ? ": " + json.data.result : ""),
+      type: result ? "success" : "error",
       delay: 5000
     })
   }
