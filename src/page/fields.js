@@ -172,7 +172,7 @@ const Fields = () => {
     let result = json.data?.statusCode === 1
     setToast({
       text: result
-        ? "运行完成" + (json.data.result ? ": " + json.data.result : "")
+        ? "运行完毕" + (json.data.result ? ": " + json.data.result : "")
         : "运行失败" + (json.data.result ? ": " + json.data.result : ""),
       type: result ? "success" : "error",
       delay: 5000

@@ -34,7 +34,7 @@ const CompileRecord = ({meetingUUID}) => {
         item.language = item.type.name.split("/")[1]
         item.cpuTime = item.cpuTime ? item.cpuTime + " ms" : "0 ms"
         item.realTime = item.realTime ? item.realTime + " ms" : "0 ms"
-        const memory = item.memory / 1024
+        const memory = item.memory ? item.memory : 0
         item.memory = memory.toString().length < 4 ? memory + " KB" : (memory / 1024).toFixed(1) + " MB"
         item.status && (item.statusFormat = <font color={item.status.id === 1 ? "green" : "red"}>{item.status.name}</font>)
         item.commit = <a onClick={() => onBinaryClick(item)}>查看</a>
@@ -86,7 +86,7 @@ const CompileRecord = ({meetingUUID}) => {
         <Table.Column prop="createAt" label="提交时间" />
         <Table.Column prop="language" label="目标语言" />
         <Table.Column prop="cpuTime" label="CPU用时" />
-        <Table.Column prop="realTime" label="执行用时" />
+        <Table.Column prop="realTime" label="运行用时" />
         <Table.Column prop="memory" label="内存消耗" />
         <Table.Column prop="statusFormat" label="状态" />
         <Table.Column prop="commit" label="提交代码" />
