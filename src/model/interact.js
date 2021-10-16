@@ -20,6 +20,7 @@ export const rtcEvent = {
   micChange: "mic_change",
   cameraChange: "camera_change",
   editChange: "edit_change",
+  cursorChange: "cursor_change",
   languageChange: "language_change",
   judgeResultReceive: "judge_result_receive"
 }
@@ -32,6 +33,7 @@ export const interactInit = ({
                                onOtherMicChange,
                                onOtherCameraChange,
                                onOtherEditChange,
+                               onOtherCursorChange,
                                onOtherLanguageChange,
                                onJudgeResultReceive
                              }) => {
@@ -57,6 +59,9 @@ export const interactInit = ({
         break
       case rtcEvent.editChange:
         onOtherEditChange && onOtherEditChange(json)
+        break
+      case rtcEvent.cursorChange:
+        onOtherCursorChange && onOtherCursorChange(json)
         break
       case rtcEvent.languageChange:
         onOtherLanguageChange && onOtherLanguageChange(json)

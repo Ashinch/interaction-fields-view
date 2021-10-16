@@ -19,27 +19,6 @@ import { Model } from "../model/model"
 import CameraView from "../component/cameraView"
 import { Clock, Codepen, FileText, PlayFill } from '@geist-ui/react-icons'
 
-import { Controlled as CodeMirror } from "react-codemirror2"
-import "codemirror/lib/codemirror"
-import "codemirror/lib/codemirror.css"
-import "codemirror/theme/idea.css"
-import 'codemirror/addon/selection/active-line'
-
-import 'codemirror/addon/fold/foldgutter.css' // 折叠
-import 'codemirror/addon/fold/foldcode.js'
-import 'codemirror/addon/fold/foldgutter.js'
-import 'codemirror/addon/fold/brace-fold.js'
-import 'codemirror/addon/fold/comment-fold.js'
-
-import 'codemirror/addon/hint/show-hint.css' // start-ctrl+空格代码提示补全
-import 'codemirror/addon/hint/show-hint.js'
-import 'codemirror/addon/hint/anyword-hint.js' // e
-import 'codemirror/mode/javascript/javascript' //语言
-import 'codemirror/mode/markdown/markdown' //语言
-import 'codemirror/mode/xml/xml.js'
-import 'codemirror/mode/python/python.js'
-import 'codemirror/mode/perl/perl.js'
-import 'codemirror/mode/clike/clike.js'
 
 import {
   interactClose,
@@ -50,35 +29,24 @@ import {
   send
 } from "../model/interact"
 import CompileRecord from "../component/compileRecord"
+import InteractionBoard, { editorLang, placeholder } from "../component/interactionBoard"
 
 let width
-const editorLang = [
-  "text",
-  "text/x-java",
-  "text/x-cython",
-  "text/x-cython",
-  "text/javascript",
-  "text/x-csrc",
-  "text/x-c++src",
-]
 
 const Fields = () => {
   const history = useHistory()
   const {code} = useParams()
   const [loading, setLoading] = useState(true)
-  const [editValue, setEditValue] = useState("class Main {\n" +
-    "    public static void main(String[] args) {\n" +
-    "        System.out.println(\"Hello world!\");\n" +
-    "    }\n" +
-    "}")
+  const [editValue, setEditValue] = useState(placeholder[0])
   const [meetingStatus, setMeetingStatus] = useState()
   const [typeID, setTypeID] = useState(1)
   const [language, setLanguage] = useState(editorLang[typeID])
+  const [isRun, setIsRun] = useState(false)
   const [toasts, setToast] = useToasts()
 
   const otherCameraRef = useRef()
   const oneselfCameraRef = useRef()
-  const codeMirrorRef = useRef()
+  const interactionBoard = useRef()
   const codeDivRef = useRef()
 
   useEffect(() => {
@@ -98,6 +66,7 @@ const Fields = () => {
         onOtherMicChange: onOtherMicChange,
         onOtherCameraChange: onOtherCameraChange,
         onOtherEditChange: onOtherEditChange,
+        onOtherCursorChange: onOtherCursorChange,
         onOtherLanguageChange: onOtherLanguageChange,
         onJudgeResultReceive: onJudgeResultReceive
       })
@@ -128,8 +97,17 @@ const Fields = () => {
 
   const onOtherEditChange = (json) => {
     if (json.data.origin === '+input' || json.data.origin === 'paste' || json.data.origin === '+delete' || json.data.origin === 'undo') {
-      codeMirrorRef?.current?.editor.doc.replaceRange(json.data.text, json.data.from, json.data.to)
+      interactionBoard?.current?.replaceRange(json.data.text, json.data.from, json.data.to)
     }
+  }
+
+  const onOneselfCursorChange = (editor) => {
+    send(rtcEvent.cursorChange, editor.getCursor())
+  }
+
+  const onOtherCursorChange = (json) => {
+    console.log(json)
+    interactionBoard?.current?.markLine(json.data.line)
   }
 
   const onOneselfLanguageChange = (e, isSend = true) => {
@@ -137,6 +115,7 @@ const Fields = () => {
     setLanguage(editorLang[e])
     setTypeID(e)
     isSend && send(rtcEvent.languageChange, e)
+    setEditValue(placeholder[e-1])
   }
 
   const onOtherLanguageChange = (json) => {
@@ -153,21 +132,23 @@ const Fields = () => {
 
   const onRunClick = () => {
     let code = editValue
-    const selectedValue = codeMirrorRef?.current?.editor.getSelection()
+    const selectedValue = interactionBoard?.current?.getSelection()
     if (Bee.StringUtils.isNotBlank(selectedValue)) {
       code = selectedValue
     }
-    console.log("onRunClick", selectedValue)
+    setIsRun(true)
     Model.judge.commit({meetingUUID: meetingStatus.uuid, typeID: typeID, code: code})
       .then((res) => {
         console.log(res)
       })
       .catch((err) => {
+        setIsRun(false)
         console.log(err)
       })
   }
 
   const onJudgeResultReceive = (json) => {
+    setIsRun(false)
     console.log("onJudgeResultReceive", json)
     let result = json.data?.statusCode === 1
     setToast({
@@ -202,7 +183,8 @@ const Fields = () => {
                   })}
                 </Select>
                 <Spacer w={1} />
-                <Button auto type="success-light" shadow iconRight={<PlayFill />} onClick={onRunClick}>运行</Button>
+                <Button auto type="success-light" shadow iconRight={<PlayFill />} onClick={onRunClick}
+                        loading={isRun}>运行</Button>
               </div>
             </Grid.Container>
             <Spacer h={1} />
@@ -211,29 +193,8 @@ const Fields = () => {
                 <Tabs.Item label={<><Codepen />交互板</>} value="1" height="50px">
                   <Spacer h={1} />
                   <div id="ss" ref={codeDivRef} style={{display: "flex", flex: "1", height: "auto"}}>
-                    <CodeMirror
-                      ref={codeMirrorRef}
-                      value={editValue}
-                      options={{
-                        lineNumbers: true,
-                        mode: {name: language},
-                        extraKeys: {"Alt": "autocomplete"},
-                        autofocus: true,
-                        styleActiveLine: true,
-                        lineWrapping: true,
-                        foldGutter: true,
-                        gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
-                        scrollbarStyle: "native",
-                        fixedGutter: true,
-                        coverGutterNextToScrollbar: false
-                      }}
-                      onBeforeChange={onOneselfEditChange}
-                      spellcheck
-                      editorDidMount={(editor) => {
-                        console.log(width)
-                        // editor.setSize(document.getElementById("ss").clientWidth, document.getElementById("ss").clientHeight)
-                      }}
-                    />
+                    <InteractionBoard ref={interactionBoard} editValue={editValue} language={language}
+                                      onBeforeChange={onOneselfEditChange} onCursorActivity={onOneselfCursorChange}/>
                   </div>
                 </Tabs.Item>
                 <Tabs.Item label={<><FileText />笔记</>} value="2" height="50px">
