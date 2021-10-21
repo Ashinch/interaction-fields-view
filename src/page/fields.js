@@ -30,8 +30,11 @@ import {
 } from "../model/interact"
 import CompileRecord from "../component/compileRecord"
 import InteractionBoard, { editorLang, placeholder } from "../component/interactionBoard"
+import TextOperation from "../util/text-operation"
+import Client from "../util/client"
 
 let width
+let client = new Client(0)
 
 const Fields = () => {
   const history = useHistory()
@@ -61,11 +64,14 @@ const Fields = () => {
       interactInit({
         url: `wss://${res.data.ip}:${res.data.port}/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`,
         isCreator: Model.session.isMe(res.data.creatorUUID),
+        onConnected: onConnected,
         onAddOneselfStream: onAddOneselfStream,
         onAddOtherStream: onAddOtherStream,
         onOtherMicChange: onOtherMicChange,
         onOtherCameraChange: onOtherCameraChange,
         onOtherEditChange: onOtherEditChange,
+        onOperation: onOperation,
+        onACK: onACK,
         onOtherCursorChange: onOtherCursorChange,
         onOtherLanguageChange: onOtherLanguageChange,
         onJudgeResultReceive: onJudgeResultReceive
@@ -90,9 +96,133 @@ const Fields = () => {
     otherCameraRef.current?.setStream(stream)
   }
 
+  let cmpPos = (a, b) => {
+    if (a.line < b.line) {
+      return -1
+    }
+    if (a.line > b.line) {
+      return 1
+    }
+    if (a.ch < b.ch) {
+      return -1
+    }
+    if (a.ch > b.ch) {
+      return 1
+    }
+    return 0
+  }
+
+  let posEq = (a, b) => {
+    return cmpPos(a, b) === 0
+  }
+  let posLe = (a, b) => {
+    return cmpPos(a, b) <= 0
+  }
+
+  let minPos = (a, b) => {
+    return posLe(a, b) ? a : b
+  }
+  let maxPos = (a, b) => {
+    return posLe(a, b) ? b : a
+  }
+
+  function codemirrorDocLength(doc) {
+    return doc.indexFromPos({line: doc.lastLine(), ch: 0}) +
+      doc.getLine(doc.lastLine()).length
+  }
+
   const onOneselfEditChange = (editor, data, value) => {
-    setEditValue(value)
-    send(rtcEvent.editChange, data)
+    if (data.origin === undefined) {
+      return
+    }
+    console.log(data, editor.doc.cm.indexFromPos(data.from))
+
+    let docEndLength = codemirrorDocLength(editor.doc.cm)
+    let operation = new TextOperation().retain(docEndLength)
+    let inverse = new TextOperation().retain(docEndLength)
+
+    let indexFromPos = function (pos) {
+      return editor.doc.cm.indexFromPos(pos)
+    }
+
+    function last(arr) {
+      return arr[arr.length - 1]
+    }
+
+    const sumLengths = (strArr) => {
+      if (strArr.length === 0) {
+        return 0
+      }
+      let sum = 0
+      for (let i = 0; i < strArr.length; i++) {
+        sum += strArr[i].length
+      }
+      return sum + strArr.length - 1
+    }
+
+    const updateIndexFromPos = (indexFromPos, change) => {
+      return function (pos) {
+        if (posLe(pos, change.from)) {
+          return indexFromPos(pos)
+        }
+        if (posLe(change.to, pos)) {
+          return indexFromPos({
+            line: pos.line + change.text.length - 1 - (change.to.line - change.from.line),
+            ch: (change.to.line < pos.line) ?
+              pos.ch :
+              (change.text.length <= 1) ?
+                pos.ch - (change.to.ch - change.from.ch) + sumLengths(change.text) :
+                pos.ch - change.to.ch + last(change.text).length
+          }) + sumLengths(change.removed) - sumLengths(change.text)
+        }
+        if (change.from.line === pos.line) {
+          return indexFromPos(change.from) + pos.ch - change.from.ch
+        }
+        return indexFromPos(change.from) +
+          sumLengths(change.removed.slice(0, pos.line - change.from.line)) +
+          1 + pos.ch
+      }
+    }
+
+    indexFromPos = updateIndexFromPos(indexFromPos, data)
+
+    let fromIndex = indexFromPos(data.from)
+    let restLength = docEndLength - fromIndex - sumLengths(data.text)
+
+    operation = new TextOperation()
+      .retain(fromIndex)
+      ['delete'](sumLengths(data.removed))
+      .insert(data.text.join('\n'))
+      .retain(restLength)
+      .compose(operation)
+
+    inverse = inverse.compose(new TextOperation()
+      .retain(fromIndex)
+      ['delete'](sumLengths(data.text))
+      .insert(data.removed.join('\n'))
+      .retain(restLength)
+    )
+
+    console.log(`operation: ${JSON.stringify(operation)}, inverse: ${JSON.stringify(inverse)}`)
+    client.applyClient(operation)
+  }
+
+  const onConnected = (json) => {
+    // if (!(json.data.ops instanceof Array)) return
+    console.log("onConnected", json.data.version, json.data.content)
+    client = new Client(json.data.version)
+    client.setCM(interactionBoard?.current?.getEditor().doc.cm)
+    interactionBoard?.current?.replaceRange(json.data.content, {line: 0, ch: 0})
+  }
+
+  const onACK = (json) => {
+    client.serverAck(json.data)
+  }
+
+  const onOperation = (json) => {
+    if (!(json.data.ops instanceof Array)) return
+    console.log("onOperation", json.data.version)
+    client.applyServer(json.data.version, json.data.ops)
   }
 
   const onOtherEditChange = (json) => {
@@ -115,7 +245,7 @@ const Fields = () => {
     setLanguage(editorLang[e])
     setTypeID(e)
     isSend && send(rtcEvent.languageChange, e)
-    setEditValue(placeholder[e-1])
+    setEditValue(placeholder[e - 1])
   }
 
   const onOtherLanguageChange = (json) => {
@@ -194,7 +324,7 @@ const Fields = () => {
                   <Spacer h={1} />
                   <div id="ss" ref={codeDivRef} style={{display: "flex", flex: "1", height: "auto"}}>
                     <InteractionBoard ref={interactionBoard} editValue={editValue} language={language}
-                                      onBeforeChange={onOneselfEditChange} onCursorActivity={onOneselfCursorChange}/>
+                                      onBeforeChange={onOneselfEditChange} onCursorActivity={onOneselfCursorChange} />
                   </div>
                 </Tabs.Item>
                 <Tabs.Item label={<><FileText />笔记</>} value="2" height="50px">

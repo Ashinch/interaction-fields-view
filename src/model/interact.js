@@ -14,28 +14,34 @@ export const iceServer = {
 }
 
 export const rtcEvent = {
-  iceCandidate: "_ice_candidate",
-  offer: "_offer",
-  answer: "_answer",
-  micChange: "mic_change",
-  cameraChange: "camera_change",
-  editChange: "edit_change",
-  cursorChange: "cursor_change",
-  languageChange: "language_change",
-  judgeResultReceive: "judge_result_receive"
+  connected: "connected",
+  iceCandidate: "iceCandidate",
+  offer: "offer",
+  answer: "answer",
+  micChange: "micChange",
+  cameraChange: "cameraChange",
+  editChange: "editChange",
+  ack: "ack",
+  cursorChange: "cursorChange",
+  languageChange: "languageChange",
+  judgeResultReceive: "judgeResultReceive",
+  operation: "operation"
 }
 
 export const interactInit = ({
                                url,
                                isCreator,
+                               onConnected,
                                onAddOneselfStream,
                                onAddOtherStream,
                                onOtherMicChange,
                                onOtherCameraChange,
                                onOtherEditChange,
+                               onOperation,
+                               onACK,
                                onOtherCursorChange,
                                onOtherLanguageChange,
-                               onJudgeResultReceive
+                               onJudgeResultReceive,
                              }) => {
   ws = new WebSocket(url)
   //MozWebSocket
@@ -48,6 +54,9 @@ export const interactInit = ({
     console.info('Received: ', event)
     const json = JSON.parse(event.data)
     switch (json.event) {
+      case rtcEvent.connected:
+        onConnected && onConnected(json)
+        break
       case rtcEvent.iceCandidate:
         pc && pc.addIceCandidate(new RTCIceCandidate(json.data.candidate))
         break
@@ -59,6 +68,12 @@ export const interactInit = ({
         break
       case rtcEvent.editChange:
         onOtherEditChange && onOtherEditChange(json)
+        break
+      case rtcEvent.operation:
+        onOperation && onOperation(json)
+        break
+      case rtcEvent.ack:
+        onACK && onACK(json)
         break
       case rtcEvent.cursorChange:
         onOtherCursorChange && onOtherCursorChange(json)

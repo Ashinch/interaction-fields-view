@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react"
 import "../util/bee.js"
 
-import { Controlled as CodeMirror } from "react-codemirror2"
+import { UnControlled as CodeMirror } from "react-codemirror2"
 import "codemirror/lib/codemirror"
 import "codemirror/lib/codemirror.css"
 import "codemirror/theme/idea.css"
@@ -28,7 +28,10 @@ const InteractionBoard = forwardRef(({editValue, language, onBeforeChange, onCur
   const codeMirrorRef = useRef()
 
   useImperativeHandle(ref, () => ({
-    replaceRange: (code, from, to) => {
+    getEditor: () => {
+      return codeMirrorRef?.current?.editor
+    },
+    replaceRange: (code, from, to = null) => {
       codeMirrorRef?.current?.editor.doc.replaceRange(code, from, to)
     },
     getSelection: () => {
@@ -38,8 +41,8 @@ const InteractionBoard = forwardRef(({editValue, language, onBeforeChange, onCur
       codeMirrorRef?.current?.editor.getAllMarks().forEach(item => item.clear())
       codeMirrorRef?.current?.editor.markText({line: lineNumber, ch: 0}, {line: lineNumber, ch: 10000}, {
         className: "other-line",
-        readonly: true,
-        atomic: true,
+        // readonly: true,
+        // atomic: true,
         selectLeft: false,
         selectRight: false
       })
@@ -65,7 +68,8 @@ const InteractionBoard = forwardRef(({editValue, language, onBeforeChange, onCur
           coverGutterNextToScrollbar: false,
           autoCloseBrackets: true
         }}
-        onBeforeChange={onBeforeChange}
+        onChange={onBeforeChange}
+        // onBeforeChange={onBeforeChange}
         spellcheck
         onCursorActivity={onCursorActivity}
         editorDidMount={(editor) => {
@@ -84,11 +88,7 @@ const InteractionBoard = forwardRef(({editValue, language, onBeforeChange, onCur
 
 export const placeholder = [
   // java
-  "class Main {\n" +
-  "    public static void main(String[] args) {\n" +
-  "        System.out.println(\"Hello World!\");\n" +
-  "    }\n" +
-  "}\n",
+  "",
 
   // python2
   "print 'Hello World'\n",
