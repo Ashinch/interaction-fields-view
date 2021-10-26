@@ -59,54 +59,136 @@ const Home = () => {
   }
 
   return (
-    <Page dotBackdrop width="800px" padding={0}>
-      <Page.Header height="80px" width="100%" center>
-        <svg height="50" viewBox="0 0 284 65" fill="var(--geist-foreground)">
-          <path
-            d="M141.68 16.25c-11.04 0-19 7.2-19 18s8.96 18 20 18c6.67 0 12.55-2.64 16.19-7.09l-7.65-4.42c-2.02 2.21-5.09 3.5-8.54 3.5-4.79 0-8.86-2.5-10.37-6.5h28.02c.22-1.12.35-2.28.35-3.5 0-10.79-7.96-17.99-19-17.99zm-9.46 14.5c1.25-3.99 4.67-6.5 9.45-6.5 4.79 0 8.21 2.51 9.45 6.5h-18.9zm117.14-14.5c-11.04 0-19 7.2-19 18s8.96 18 20 18c6.67 0 12.55-2.64 16.19-7.09l-7.65-4.42c-2.02 2.21-5.09 3.5-8.54 3.5-4.79 0-8.86-2.5-10.37-6.5h28.02c.22-1.12.35-2.28.35-3.5 0-10.79-7.96-17.99-19-17.99zm-9.45 14.5c1.25-3.99 4.67-6.5 9.45-6.5 4.79 0 8.21 2.51 9.45 6.5h-18.9zm-39.03 3.5c0 6 3.92 10 10 10 4.12 0 7.21-1.87 8.8-4.92l7.68 4.43c-3.18 5.3-9.14 8.49-16.48 8.49-11.05 0-19-7.2-19-18s7.96-18 19-18c7.34 0 13.29 3.19 16.48 8.49l-7.68 4.43c-1.59-3.05-4.68-4.92-8.8-4.92-6.07 0-10 4-10 10zm82.48-29v46h-9v-46h9zM37.59.25l36.95 64H.64l36.95-64zm92.38 5l-27.71 48-27.71-48h10.39l17.32 30 17.32-30h10.39zm58.91 12v9.69c-1-.29-2.06-.49-3.2-.49-5.81 0-10 4-10 10v14.8h-9v-34h9v9.2c0-5.08 5.91-9.2 13.2-9.2z" />
-        </svg>
-        <Spacer w={50} />
-        <Button auto type="abort" onClick={() => setVisible(true)}>联系我们</Button>
-        {Model.session.isLogin() ? (
-          <Avatar text={`${Model.session.getInfo().user.username.charAt(0)}`} />
-        ) : (
-          <>
-            <Button auto type="abort">注册</Button>
+    <>
+      <Page width="1000px" padding={0}>
+        <Page.Header height="80px" width="100%" center style={{justifyContent: "space-between"}}>
+          <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
+            <svg height="26" viewBox="0 0 75 65" fill="var(--geist-foreground)">
+              <path d="M37.59.25l36.95 64H.64l36.95-64z" />
+            </svg>
             <Spacer w={1} />
-            <Button auto type="secondary" onClick={() => setVisible(true)}>登录</Button>
-          </>
-        )}
-      </Page.Header>
-      <Page.Content>
-        <Display>
-          <Image src="/geist-banner.png" draggable={false} />
-        </Display>
-        <Grid.Container justify="center" alignItems="center" gap={.5}>
-          <Grid justify="center">
-            <Input width="300px" scale={2} placeholder="输入邀请码参加面试" clearable
-                   initialValue="T3O7BP"
-                   onChange={e => setCode(e.target.value)} />
-          </Grid>
-          <Grid justify="center">
-            <Button type="secondary-light" height="54px" width="54px"
-                    disabled={Bee.StringUtils.isBlank(code)}
-                    onClick={enterMeeting}>
-              加入
-            </Button>
-          </Grid>
-        </Grid.Container>
-      </Page.Content>
+            <h3 style={{margin: 0}}>Interaction Fields</h3>
+          </div>
+          <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
+            <Button auto type="abort" onClick={() => setVisible(true)}>GitHub</Button>
+            <Button auto type="abort" onClick={() => setVisible(true)}>Contact</Button>
+            {Model.session.isLogin() ? (
+              <Avatar text={`${Model.session.getInfo().user.username.charAt(0)}`} />
+            ) : (
+              <>
+                <Button auto type="abort">注册</Button>
+                <Spacer w={1} />
+                <Button auto type="secondary" onClick={() => setVisible(true)}>登录</Button>
+              </>
+            )}
+          </div>
+        </Page.Header>
+        <Page.Content>
+          <div style={{position: "absolute", top: 136, left: 0, right: 0}}>
+            <div className="wrapper one">远程音视频通话 <span style={{fontSize: 25}}>1</span></div>
+            <div className="wrapper two">协同编辑 <span style={{fontSize: 25}}>2</span></div>
+            <div className="wrapper three">在线运行代码 <span style={{fontSize: 25}}>3</span></div>
+            <div style={{position: "absolute", top: 0, left: 0, right: 0, zIndex: 10}}>
+              <div className="wrapper one">远程音视频通话 <span style={{fontSize: 25}}>1</span></div>
+              <div className="wrapper animated-two">协同编辑 <span style={{fontSize: 25}}>2</span></div>
+              <div className="wrapper animated-three">在线运行代码 <span style={{fontSize: 25}}>3</span></div>
+            </div>
+          </div>
+          <div style={{height: 560}} />
+          <Grid.Container justify="center" alignItems="center" gap={.5}>
+            <Grid justify="center">
+              <Input width="300px" scale={2} placeholder="输入邀请码参加面试" clearable
+                     initialValue="T3O7BP"
+                     onChange={e => setCode(e.target.value)} />
+            </Grid>
+            <Grid justify="center">
+              <Button type="secondary-light" height="54px" width="54px"
+                      disabled={Bee.StringUtils.isBlank(code)}
+                      onClick={enterMeeting}>
+                加入
+              </Button>
+            </Grid>
+          </Grid.Container>
+          <Grid.Container justify="center" alignItems="center">
+            <p style={{width: 600, marginTop: 56, color: "#666", textAlign: "center"}}>
+              作为面试官<span style={{color: "#0070f3", cursor: "pointer"}}>发起</span>一场面试会议，或使用邀请码受邀加入会议。
+              通过音视频¹进行面试交流、利用协同编辑²和在线编译³来展示您的编码能力。
+            </p>
+          </Grid.Container>
+        </Page.Content>
 
-      <Modal {...bindings}>
-        <Modal.Title>登录</Modal.Title>
-        <Modal.Subtitle>{isSMS ? "输入短信验证码登录" : "输入账号密码登录"}</Modal.Subtitle>
-        <Modal.Content>
-          <Login isSMS={isSMS} setUsername={setUsername} setPassword={setPassword} />
-        </Modal.Content>
-        <Modal.Action passive onClick={() => setIsSMS(!isSMS)}>{isSMS ? "使用账号密码方式" : "使用短信验证方式"}</Modal.Action>
-        <Modal.Action onClick={login} loading={isLoginLoading}>登录</Modal.Action>
-      </Modal>
-    </Page>
+        <Modal {...bindings}>
+          <Modal.Title>登录</Modal.Title>
+          <Modal.Subtitle>{isSMS ? "输入短信验证码登录" : "输入账号密码登录"}</Modal.Subtitle>
+          <Modal.Content>
+            <Login isSMS={isSMS} setUsername={setUsername} setPassword={setPassword} />
+          </Modal.Content>
+          <Modal.Action passive onClick={() => setIsSMS(!isSMS)}>{isSMS ? "使用账号密码方式" : "使用短信验证方式"}</Modal.Action>
+          <Modal.Action onClick={login} loading={isLoginLoading}>登录</Modal.Action>
+        </Modal>
+      </Page>
+
+      <style jsx="true">{`
+        .wrapper {
+          line-height: 1.4;
+          text-align: center;
+          font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+          font-size: 120px;
+          font-weight: 900;
+          letter-spacing: -.06em;
+          user-select: none;
+        }
+
+        .one {
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: #0000;
+          background-image: linear-gradient(90deg, #007CF0, #00DFD8);
+        }
+
+        .two {
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: #000f;
+        }
+
+        .three {
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: #000f;
+        }
+
+        .animated-two {
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: #0000;
+          background-image: linear-gradient(90deg, #7928CA, #FF0080);
+          -webkit-animation: animated-two 6s linear infinite;
+        }
+
+        .animated-three {
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: #0000;
+          background-image: linear-gradient(90deg, #FF4D4D, #F9CB28);
+          -webkit-animation: animated-three 6s linear infinite;
+        }
+
+        @-webkit-keyframes animated-two {
+          0%, 50%, 100% {
+            opacity: 1;
+          }
+          66.667%, 83.333% {
+            opacity: 0;
+          }
+        }
+
+        @-webkit-keyframes animated-three {
+          0%, 50%, 100% {
+            opacity: 0;
+          }
+          66.667%, 83.333% {
+            opacity: 1;
+          }
+        }
+
+      `}</style>
+    </>
   )
 }
 

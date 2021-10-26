@@ -73,7 +73,7 @@ const InteractionBoard = forwardRef(({editValue, language, onBeforeChange, onCur
         spellcheck
         onCursorActivity={onCursorActivity}
         editorDidMount={(editor) => {
-          editor.setSize(830, 600)
+          editor.setSize(870, 600)
         }}
       />
 
@@ -88,7 +88,11 @@ const InteractionBoard = forwardRef(({editValue, language, onBeforeChange, onCur
 
 export const placeholder = [
   // java
-  "",
+  "class Main {\n" +
+  "    public static void main(String[] args) {\n" +
+  "        System.out.println(\"Hello World!\");\n" +
+  "    }\n" +
+  "}\n",
 
   // python2
   "print 'Hello World'\n",

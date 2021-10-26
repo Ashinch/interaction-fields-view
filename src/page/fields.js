@@ -33,18 +33,18 @@ import InteractionBoard, { editorLang, placeholder } from "../component/interact
 import TextOperation from "../util/text-operation"
 import Client from "../util/client"
 
-let width
-let client = new Client(0)
+let client
 
 const Fields = () => {
   const history = useHistory()
   const {code} = useParams()
   const [loading, setLoading] = useState(true)
-  const [editValue, setEditValue] = useState(placeholder[0])
+  const [editValue, setEditValue] = useState("")
   const [meetingStatus, setMeetingStatus] = useState()
   const [typeID, setTypeID] = useState(1)
   const [language, setLanguage] = useState(editorLang[typeID])
   const [isRun, setIsRun] = useState(false)
+  const [canRun, setCanRun] = useState(!editValue)
   const [toasts, setToast] = useToasts()
 
   const otherCameraRef = useRef()
@@ -61,23 +61,11 @@ const Fields = () => {
       setMeetingStatus(res.data)
       setLoading(false)
 
-      interactInit({
+      connect({
         url: `wss://${res.data.ip}:${res.data.port}/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`,
         isCreator: Model.session.isMe(res.data.creatorUUID),
-        onConnected: onConnected,
-        onAddOneselfStream: onAddOneselfStream,
-        onAddOtherStream: onAddOtherStream,
-        onOtherMicChange: onOtherMicChange,
-        onOtherCameraChange: onOtherCameraChange,
-        onOtherEditChange: onOtherEditChange,
-        onOperation: onOperation,
-        onACK: onACK,
-        onOtherCursorChange: onOtherCursorChange,
-        onOtherLanguageChange: onOtherLanguageChange,
-        onJudgeResultReceive: onJudgeResultReceive
+        cameraDeviceID: "cameraDeviceID"
       })
-      width = document.getElementById("ss")?.clientWidth
-
     }).catch((err) => {
       setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
       history.push("/")
@@ -126,16 +114,36 @@ const Fields = () => {
     return posLe(a, b) ? b : a
   }
 
-  function codemirrorDocLength(doc) {
-    return doc.indexFromPos({line: doc.lastLine(), ch: 0}) +
-      doc.getLine(doc.lastLine()).length
-  }
+
+  const connect = ({url, isCreator, cameraDeviceID}) =>
+    interactInit({
+      url: url,
+      isCreator: isCreator,
+      cameraDeviceID: cameraDeviceID,
+      onConnected: onConnected,
+      onAddOneselfStream: onAddOneselfStream,
+      onAddOtherStream: onAddOtherStream,
+      onOtherMicChange: onOtherMicChange,
+      onOtherCameraChange: onOtherCameraChange,
+      onOperation: onOperation,
+      onACK: onACK,
+      onOtherCursorChange: onOtherCursorChange,
+      onOtherLanguageChange: onOtherLanguageChange,
+      onJudgeResultReceive: onJudgeResultReceive
+    })
 
   const onOneselfEditChange = (editor, data, value) => {
+    setCanRun(value.length <= 0)
+    // setEditValue(value)
     if (data.origin === undefined) {
       return
     }
     console.log(data, editor.doc.cm.indexFromPos(data.from))
+
+    const codemirrorDocLength = (doc) => {
+      return doc.indexFromPos({line: doc.lastLine(), ch: 0}) +
+        doc.getLine(doc.lastLine()).length
+    }
 
     let docEndLength = codemirrorDocLength(editor.doc.cm)
     let operation = new TextOperation().retain(docEndLength)
@@ -212,7 +220,12 @@ const Fields = () => {
     console.log("onConnected", json.data.version, json.data.content)
     client = new Client(json.data.version)
     client.setCM(interactionBoard?.current?.getEditor().doc.cm)
-    interactionBoard?.current?.replaceRange(json.data.content, {line: 0, ch: 0})
+    if (Bee.StringUtils.isNotBlank(json.data.content)) {
+      interactionBoard?.current?.replaceRange(json.data.content, {line: 0, ch: 0})
+    } else {
+      setEditValue(placeholder[0])
+      client.applyClient(new TextOperation().insert(placeholder[0]))
+    }
   }
 
   const onACK = (json) => {
@@ -223,12 +236,6 @@ const Fields = () => {
     if (!(json.data.ops instanceof Array)) return
     console.log("onOperation", json.data.version)
     client.applyServer(json.data.version, json.data.ops)
-  }
-
-  const onOtherEditChange = (json) => {
-    if (json.data.origin === '+input' || json.data.origin === 'paste' || json.data.origin === '+delete' || json.data.origin === 'undo') {
-      interactionBoard?.current?.replaceRange(json.data.text, json.data.from, json.data.to)
-    }
   }
 
   const onOneselfCursorChange = (editor) => {
@@ -244,6 +251,7 @@ const Fields = () => {
     console.log(e)
     setLanguage(editorLang[e])
     setTypeID(e)
+    isSend && client.applyClient(new TextOperation().delete(editValue.length).insert(placeholder[e - 1]))
     isSend && send(rtcEvent.languageChange, e)
     setEditValue(placeholder[e - 1])
   }
@@ -258,6 +266,16 @@ const Fields = () => {
 
   const onOtherCameraChange = (json) => {
     otherCameraRef.current?.setCameraOff(json.data)
+  }
+
+  const onCameraSwitch = (e) => {
+    console.log(e)
+    interactClose()
+    connect({
+      url: `wss://${meetingStatus.ip}:${meetingStatus.port}/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`,
+      isCreator: Model.session.isMe(meetingStatus.creatorUUID),
+      cameraDeviceID: e
+    })
   }
 
   const onRunClick = () => {
@@ -291,19 +309,37 @@ const Fields = () => {
   }
 
   return loading ? <Page><Spinner style={{position: "absolute", top: "50%", left: "50%"}} /></Page> : (
-    <Page dotBackdrop>
-      <Page.Header>
-        <Breadcrumbs>
-          <Breadcrumbs.Item href="/">Home</Breadcrumbs.Item>
-          <Breadcrumbs.Item>Fields</Breadcrumbs.Item>
-        </Breadcrumbs>
+    <Page padding={0}>
+      <Page.Header height="80px" width="100%" center style={{justifyContent: "space-between"}}>
+        <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
+          <svg height="26" viewBox="0 0 75 65" fill="var(--geist-foreground)">
+            <path d="M37.59.25l36.95 64H.64l36.95-64z" />
+          </svg>
+          <Spacer w={1} />
+          <h3 style={{margin: 0}}>{meetingStatus.title}</h3>
+        </div>
+        <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
+          <Button auto type="abort" onClick={() => setVisible(true)}>GitHub</Button>
+          <Button auto type="abort" onClick={() => setVisible(true)}>Contact</Button>
+          {Model.session.isLogin() ? (
+            <Avatar text={`${Model.session.getInfo().user.username.charAt(0)}`} />
+          ) : (
+            <>
+              <Button auto type="abort">注册</Button>
+              <Spacer w={1} />
+              <Button auto type="secondary" onClick={() => setVisible(true)}>登录</Button>
+            </>
+          )}
+        </div>
       </Page.Header>
       <Page.Content style={{flex: 1}}>
         <Grid.Container className="interaction-board" style={{width: "100%", height: "100%"}} direction={"row"}>
-          <Grid.Container className="editor">
+          <Grid.Container className="editor" height="789px">
             <Grid.Container alignItems={"center"} direction={"row"} justify={"space-between"}>
               <Text h3 style={{fontSize: 32, margin: 0}}>{meetingStatus.title}</Text>
               <div style={{display: "flex", flexDirection: "row"}}>
+                <Button auto>环境说明</Button>
+                <Spacer w={1} />
                 <Select width="40px" height="40px"
                         onChange={onOneselfLanguageChange}
                         initialValue={typeID.toString()}
@@ -313,8 +349,8 @@ const Fields = () => {
                   })}
                 </Select>
                 <Spacer w={1} />
-                <Button auto type="success-light" shadow iconRight={<PlayFill />} onClick={onRunClick}
-                        loading={isRun}>运行</Button>
+                <Button auto type="success-light" iconRight={<PlayFill />} onClick={onRunClick}
+                        loading={isRun} disabled={canRun}>运行</Button>
               </div>
             </Grid.Container>
             <Spacer h={1} />
@@ -406,7 +442,8 @@ const Fields = () => {
               {Model.session.isMe(meetingStatus?.creatorUUID) ? (<>
                 <CameraView ref={oneselfCameraRef}
                             isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
-                            onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
+                            onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)}
+                            onCameraSwitch={onCameraSwitch} />
                 <Spacer w="24px" />
                 <CameraView ref={otherCameraRef} />
               </>) : (<>
@@ -414,7 +451,8 @@ const Fields = () => {
                 <Spacer w="24px" />
                 <CameraView ref={oneselfCameraRef}
                             isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
-                            onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)} />
+                            onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)}
+                            onCameraSwitch={onCameraSwitch} />
               </>)}
             </div>
             <Divider style={{margin: "24px 0"}} />

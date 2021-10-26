@@ -20,7 +20,6 @@ export const rtcEvent = {
   answer: "answer",
   micChange: "micChange",
   cameraChange: "cameraChange",
-  editChange: "editChange",
   ack: "ack",
   cursorChange: "cursorChange",
   languageChange: "languageChange",
@@ -31,12 +30,12 @@ export const rtcEvent = {
 export const interactInit = ({
                                url,
                                isCreator,
+                               cameraDeviceID,
                                onConnected,
                                onAddOneselfStream,
                                onAddOtherStream,
                                onOtherMicChange,
                                onOtherCameraChange,
-                               onOtherEditChange,
                                onOperation,
                                onACK,
                                onOtherCursorChange,
@@ -65,9 +64,6 @@ export const interactInit = ({
         break
       case rtcEvent.cameraChange:
         onOtherCameraChange && onOtherCameraChange(json)
-        break
-      case rtcEvent.editChange:
-        onOtherEditChange && onOtherEditChange(json)
         break
       case rtcEvent.operation:
         onOperation && onOperation(json)
@@ -109,9 +105,19 @@ export const interactInit = ({
     onAddOtherStream && onAddOtherStream(event.stream)
   }
 
+  navigator.getUserMedia =
+    navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia ||
+    navigator.msGetUserMedia
+
   navigator.getUserMedia({
       audio: true,
-      video: {width: 289, height: 289}
+      video: {
+        width: 289,
+        height: 289,
+        deviceId: cameraDeviceID
+      },
     },
     (stream) => {
       console.info("onAddOneselfStream")
@@ -160,4 +166,11 @@ export const interactClose = () => {
   pc && pc.close()
   rtcStream && console.info("RTC close", rtcStream.getTracks())
   rtcStream && rtcStream.getTracks().forEach(i => i.stop())
+}
+
+export const getDevices = (callback) => {
+  navigator.mediaDevices.enumerateDevices()
+    .then(function (devices) {
+      callback && callback(devices)
+    })
 }
