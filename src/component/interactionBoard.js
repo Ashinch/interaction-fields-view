@@ -73,7 +73,7 @@ const InteractionBoard = forwardRef(({editValue, language, onBeforeChange, onCur
         spellcheck
         onCursorActivity={onCursorActivity}
         editorDidMount={(editor) => {
-          editor.setSize(870, 600)
+          editor.setSize(770, 600)
         }}
       />
 

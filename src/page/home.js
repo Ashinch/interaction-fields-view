@@ -18,32 +18,12 @@ import "../util/bee"
 import Login from "../component/login"
 import { Session } from "../model/session"
 import { Model } from "../model/model"
+import { Header } from "../component/header"
 
 const Home = () => {
   const history = useHistory()
   const [code, setCode] = useState("T3O7BP")
-  const [username, setUsername] = useState("a")
-  const [password, setPassword] = useState("123")
-  const [isSMS, setIsSMS] = useState()
-  const [isLoginLoading, setIsLoginLoading] = useState()
-  const {visible, setVisible, bindings} = useModal()
   const [toasts, setToast] = useToasts()
-
-  const login = () => {
-    setIsLoginLoading(true)
-    Model.session.login({
-      username: username,
-      password: password,
-      // mobile: "13633048180",
-      // email: "276364092@qq.com"
-    }).then((res) => {
-      location.reload()
-    }).catch((err) => {
-      setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
-    }).finally(() => {
-      setIsLoginLoading(false)
-    })
-  }
 
   const enterMeeting = () => {
     console.log(code)
@@ -60,38 +40,17 @@ const Home = () => {
 
   return (
     <>
+      <Header width={1000} title="Interaction Fields"/>
       <Page width="1000px" padding={0}>
-        <Page.Header height="80px" width="100%" center style={{justifyContent: "space-between"}}>
-          <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
-            <svg height="26" viewBox="0 0 75 65" fill="var(--geist-foreground)">
-              <path d="M37.59.25l36.95 64H.64l36.95-64z" />
-            </svg>
-            <Spacer w={1} />
-            <h3 style={{margin: 0}}>Interaction Fields</h3>
-          </div>
-          <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
-            <Button auto type="abort" onClick={() => setVisible(true)}>GitHub</Button>
-            <Button auto type="abort" onClick={() => setVisible(true)}>Contact</Button>
-            {Model.session.isLogin() ? (
-              <Avatar text={`${Model.session.getInfo().user.username.charAt(0)}`} />
-            ) : (
-              <>
-                <Button auto type="abort">注册</Button>
-                <Spacer w={1} />
-                <Button auto type="secondary" onClick={() => setVisible(true)}>登录</Button>
-              </>
-            )}
-          </div>
-        </Page.Header>
         <Page.Content>
-          <div style={{position: "absolute", top: 136, left: 0, right: 0}}>
-            <div className="wrapper one">远程音视频通话 <span style={{fontSize: 25}}>1</span></div>
+          <div style={{position: "absolute", top: 56, left: 0, right: 0}}>
+            <div className="wrapper one">实时音视频通话 <span style={{fontSize: 25}}>1</span></div>
             <div className="wrapper two">协同编辑 <span style={{fontSize: 25}}>2</span></div>
-            <div className="wrapper three">在线运行代码 <span style={{fontSize: 25}}>3</span></div>
+            <div className="wrapper three">在线编程面试 <span style={{fontSize: 25}}>3</span></div>
             <div style={{position: "absolute", top: 0, left: 0, right: 0, zIndex: 10}}>
-              <div className="wrapper one">远程音视频通话 <span style={{fontSize: 25}}>1</span></div>
+              <div className="wrapper one">实时音视频通话 <span style={{fontSize: 25}}>1</span></div>
               <div className="wrapper animated-two">协同编辑 <span style={{fontSize: 25}}>2</span></div>
-              <div className="wrapper animated-three">在线运行代码 <span style={{fontSize: 25}}>3</span></div>
+              <div className="wrapper animated-three">在线编程面试 <span style={{fontSize: 25}}>3</span></div>
             </div>
           </div>
           <div style={{height: 560}} />
@@ -110,22 +69,12 @@ const Home = () => {
             </Grid>
           </Grid.Container>
           <Grid.Container justify="center" alignItems="center">
-            <p style={{width: 600, marginTop: 56, color: "#666", textAlign: "center"}}>
-              作为面试官<span style={{color: "#0070f3", cursor: "pointer"}}>发起</span>一场面试会议，或使用邀请码受邀加入会议。
-              通过音视频¹进行面试交流、利用协同编辑²和在线编译³来展示您的编码能力。
+            <p style={{width: 800, marginTop: 56, color: "#666", textAlign: "center"}}>
+              作为面试官<span style={{color: "#0070f3", cursor: "pointer"}}>发起</span>一场面试会议，或作为候选人受邀加入。
+              <br/>通过音视频¹进行实时通话交流，利用协同编辑²来展示您的编程能力，并通过在线编译³得到运行结果。
             </p>
           </Grid.Container>
         </Page.Content>
-
-        <Modal {...bindings}>
-          <Modal.Title>登录</Modal.Title>
-          <Modal.Subtitle>{isSMS ? "输入短信验证码登录" : "输入账号密码登录"}</Modal.Subtitle>
-          <Modal.Content>
-            <Login isSMS={isSMS} setUsername={setUsername} setPassword={setPassword} />
-          </Modal.Content>
-          <Modal.Action passive onClick={() => setIsSMS(!isSMS)}>{isSMS ? "使用账号密码方式" : "使用短信验证方式"}</Modal.Action>
-          <Modal.Action onClick={login} loading={isLoginLoading}>登录</Modal.Action>
-        </Modal>
       </Page>
 
       <style jsx="true">{`

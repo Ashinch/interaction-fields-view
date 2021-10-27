@@ -1,17 +1,18 @@
 import {
   Avatar,
   Breadcrumbs,
-  Button,
+  Button, Card, Code,
   Divider,
-  Grid,
+  Grid, Note,
   Page,
   Select,
   Spacer,
   Spinner,
-  Tabs,
+  Tabs, Tag,
   Text,
   useToasts
 } from '@geist-ui/react'
+import { Divider as DividerIcon } from "@geist-ui/react-icons"
 import { useEffect, useRef, useState } from "react"
 import "../util/bee"
 import { useHistory, useParams } from "react-router-dom"
@@ -32,6 +33,14 @@ import CompileRecord from "../component/compileRecord"
 import InteractionBoard, { editorLang, placeholder } from "../component/interactionBoard"
 import TextOperation from "../util/text-operation"
 import Client from "../util/client"
+import { Header } from "../component/header"
+import BarChart from "@geist-ui/react-icons/barChart"
+import Activity from "@geist-ui/react-icons/activity"
+import Cast from "@geist-ui/react-icons/cast"
+import LogOut from "@geist-ui/react-icons/logOut"
+import Wifi from "@geist-ui/react-icons/wifi"
+import Infinity from "@geist-ui/react-icons/infinity"
+import Power from "@geist-ui/react-icons/power"
 
 let client
 
@@ -41,6 +50,9 @@ const Fields = () => {
   const [loading, setLoading] = useState(true)
   const [editValue, setEditValue] = useState("")
   const [meetingStatus, setMeetingStatus] = useState()
+  const [userJoin, setUserJoin] = useState()
+  const [bitrate, setBitrate] = useState()
+  const [delay, setDelay] = useState()
   const [typeID, setTypeID] = useState(1)
   const [language, setLanguage] = useState(editorLang[typeID])
   const [isRun, setIsRun] = useState(false)
@@ -127,9 +139,12 @@ const Fields = () => {
       onOtherCameraChange: onOtherCameraChange,
       onOperation: onOperation,
       onACK: onACK,
+      onJoin: onJoin,
+      onQuit: onQuit,
       onOtherCursorChange: onOtherCursorChange,
       onOtherLanguageChange: onOtherLanguageChange,
-      onJudgeResultReceive: onJudgeResultReceive
+      onJudgeResultReceive: onJudgeResultReceive,
+      onStats: onStats
     })
 
   const onOneselfEditChange = (editor, data, value) => {
@@ -232,6 +247,14 @@ const Fields = () => {
     client.serverAck(json.data)
   }
 
+  const onJoin = (json) => {
+    setUserJoin(json.data)
+  }
+
+  const onQuit = (json) => {
+    setUserJoin(null)
+  }
+
   const onOperation = (json) => {
     if (!(json.data.ops instanceof Array)) return
     console.log("onOperation", json.data.version)
@@ -308,187 +331,189 @@ const Fields = () => {
     })
   }
 
+  const onStats = ({bitrate, delay}) => {
+    setBitrate(bitrate)
+    setDelay(delay)
+  }
+
   return loading ? <Page><Spinner style={{position: "absolute", top: "50%", left: "50%"}} /></Page> : (
-    <Page padding={0}>
-      <Page.Header height="80px" width="100%" center style={{justifyContent: "space-between"}}>
-        <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
-          <svg height="26" viewBox="0 0 75 65" fill="var(--geist-foreground)">
-            <path d="M37.59.25l36.95 64H.64l36.95-64z" />
-          </svg>
-          <Spacer w={1} />
-          <h3 style={{margin: 0}}>{meetingStatus.title}</h3>
-        </div>
-        <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
-          <Button auto type="abort" onClick={() => setVisible(true)}>GitHub</Button>
-          <Button auto type="abort" onClick={() => setVisible(true)}>Contact</Button>
-          {Model.session.isLogin() ? (
-            <Avatar text={`${Model.session.getInfo().user.username.charAt(0)}`} />
-          ) : (
-            <>
-              <Button auto type="abort">注册</Button>
-              <Spacer w={1} />
-              <Button auto type="secondary" onClick={() => setVisible(true)}>登录</Button>
-            </>
-          )}
-        </div>
-      </Page.Header>
-      <Page.Content style={{flex: 1}}>
-        <Grid.Container className="interaction-board" style={{width: "100%", height: "100%"}} direction={"row"}>
-          <Grid.Container className="editor" height="789px">
-            <Grid.Container alignItems={"center"} direction={"row"} justify={"space-between"}>
-              <Text h3 style={{fontSize: 32, margin: 0}}>{meetingStatus.title}</Text>
-              <div style={{display: "flex", flexDirection: "row"}}>
-                <Button auto>环境说明</Button>
-                <Spacer w={1} />
-                <Select width="40px" height="40px"
-                        onChange={onOneselfLanguageChange}
-                        initialValue={typeID.toString()}
-                        value={typeID.toString()}>
-                  {meetingStatus.attachmentType?.map((item) => {
-                    return <Select.Option key={item.id} value={item.id.toString()}>{item.name}</Select.Option>
-                  })}
-                </Select>
-                <Spacer w={1} />
-                <Button auto type="success-light" iconRight={<PlayFill />} onClick={onRunClick}
-                        loading={isRun} disabled={canRun}>运行</Button>
-              </div>
+    <>
+      <Header width={1500} title="Interaction Fields" subtitle={["会议室", code]} shadow />
+      <Page padding={0}>
+        <Page.Content style={{flex: 1}}>
+          <Grid.Container className="interaction-board" style={{width: "100%", height: "100%"}} justify={"center"}
+                          direction={"row"}>
+            <Grid.Container className="editor">
+              <Grid.Container alignItems={"center"} direction={"row"} justify={"space-between"}>
+                <Text h3 style={{fontSize: 32, margin: 0}}>{meetingStatus.title}</Text>
+                <div style={{display: "flex", flexDirection: "row"}}>
+                  <Button auto>环境说明</Button>
+                  <Spacer w={1} />
+                  <Select width="40px" height="40px"
+                          onChange={onOneselfLanguageChange}
+                          initialValue={typeID.toString()}
+                          value={typeID.toString()}>
+                    {meetingStatus.attachmentType?.map((item) => {
+                      return <Select.Option key={item.id} value={item.id.toString()}>{item.name}</Select.Option>
+                    })}
+                  </Select>
+                  <Spacer w={1} />
+                  <Button auto type="success" iconRight={<PlayFill />} onClick={onRunClick}
+                          loading={isRun} disabled={canRun}>运行</Button>
+                </div>
+              </Grid.Container>
+              <Spacer h={1} />
+              <Grid>
+                <Tabs initialValue="1">
+                  <Tabs.Item label={<><Codepen />交互板</>} value="1" height="50px">
+                    <Spacer h={1} />
+                    <div id="ss" ref={codeDivRef} style={{display: "flex", flex: "1", height: "auto"}}>
+                      <InteractionBoard ref={interactionBoard} editValue={editValue} language={language}
+                                        onBeforeChange={onOneselfEditChange} onCursorActivity={onOneselfCursorChange} />
+                    </div>
+                  </Tabs.Item>
+                  <Tabs.Item label={<><FileText />笔记</>} value="2" height="50px">
+                    <Spacer h={1} />
+                    <div style={{maxWidth: 951, maxHeight: 700}}>
+                      {/*<CodeMirror*/}
+                      {/*  value="这里输入的文本仅自己可见"*/}
+                      {/*  style={{height: "auto"}}*/}
+                      {/*  options={{*/}
+                      {/*    lineNumbers: true,*/}
+                      {/*    mode: {name: "text"},*/}
+                      {/*    autofocus: true,*/}
+                      {/*    styleActiveLine: true,*/}
+                      {/*    lineWrapping: true,*/}
+                      {/*  }}*/}
+                      {/*  onBeforeChange={editChange}*/}
+                      {/*  spellcheck="true"*/}
+                      {/*  editorDidMount={(editor) => {*/}
+                      {/*    editor.setSize("951", "700")*/}
+                      {/*  }}*/}
+                      {/*/>*/}
+                    </div>
+                  </Tabs.Item>
+                  <Tabs.Item label={<><Clock />运行记录</>} value="3" height="50px">
+                    <Spacer h={1} />
+                    <CompileRecord meetingUUID={meetingStatus.uuid} />
+                  </Tabs.Item>
+                </Tabs>
+              </Grid>
             </Grid.Container>
-            <Spacer h={1} />
-            <Grid>
-              <Tabs initialValue="1">
-                <Tabs.Item label={<><Codepen />交互板</>} value="1" height="50px">
-                  <Spacer h={1} />
-                  <div id="ss" ref={codeDivRef} style={{display: "flex", flex: "1", height: "auto"}}>
-                    <InteractionBoard ref={interactionBoard} editValue={editValue} language={language}
-                                      onBeforeChange={onOneselfEditChange} onCursorActivity={onOneselfCursorChange} />
-                  </div>
-                </Tabs.Item>
-                <Tabs.Item label={<><FileText />笔记</>} value="2" height="50px">
-                  <Spacer h={1} />
-                  <div style={{maxWidth: 951, maxHeight: 700}}>
-                    {/*<CodeMirror*/}
-                    {/*  value="这里输入的文本仅自己可见"*/}
-                    {/*  style={{height: "auto"}}*/}
-                    {/*  options={{*/}
-                    {/*    lineNumbers: true,*/}
-                    {/*    mode: {name: "text"},*/}
-                    {/*    autofocus: true,*/}
-                    {/*    styleActiveLine: true,*/}
-                    {/*    lineWrapping: true,*/}
-                    {/*  }}*/}
-                    {/*  onBeforeChange={editChange}*/}
-                    {/*  spellcheck="true"*/}
-                    {/*  editorDidMount={(editor) => {*/}
-                    {/*    editor.setSize("951", "700")*/}
-                    {/*  }}*/}
-                    {/*/>*/}
-                  </div>
-                </Tabs.Item>
-                <Tabs.Item label={<><Clock />运行记录</>} value="3" height="50px">
-                  <Spacer h={1} />
-                  <CompileRecord meetingUUID={meetingStatus.uuid} />
-                </Tabs.Item>
-              </Tabs>
+            <Spacer w={2} />
+            <Grid className="extra">
+              <Grid.Container justify="space-between" alignItems="center">
+                <Text h3 style={{fontSize: 32, marginBottom: 0}}>信息</Text>
+                <Button auto type="error" ghost iconRight={<Power />} onClick={onRunClick}>结束会议</Button>
+              </Grid.Container>
+              <Divider style={{margin: "24px 0"}} />
+              <div className="camera" style={{borderRadius: 50}}>
+                {Model.session.isMe(meetingStatus?.creatorUUID) ? (<>
+                  <CameraView ref={oneselfCameraRef}
+                              isCreator={true}
+                              userJoin={userJoin}
+                              isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
+                              onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)}
+                              onCameraSwitch={onCameraSwitch} />
+                  <Spacer w="24px" />
+                  <CameraView ref={otherCameraRef} userJoin={userJoin} />
+                </>) : (<>
+                  <CameraView ref={otherCameraRef} userJoin={userJoin} isCreator={true} />
+                  <Spacer w="24px" />
+                  <CameraView ref={oneselfCameraRef}
+                              userJoin={userJoin}
+                              isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
+                              onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)}
+                              onCameraSwitch={onCameraSwitch} />
+                </>)}
+              </div>
+              <Divider style={{margin: "24px 0"}} />
+              <Grid.Container gap={2}>
+                <div className="stats-item">
+                  <span style={{fontWeight: "bold"}}>HEARTBEAT-1</span>
+                  <span style={{display: "flex"}}>
+                    <span>0 ms</span>
+                    <Spacer w={.5} />
+                    <Activity />
+                  </span>
+                </div>
+                <Spacer w={"12px"} />
+                <div className="stats-item">
+                  <span style={{fontWeight: "bold"}}>HEARTBEAT-2</span>
+                  <span style={{display: "flex"}}>
+                    <span>0 ms</span>
+                    <Spacer w={.5} />
+                    <Activity />
+                  </span>
+                </div>
+                <div className="stats-item">
+                  <span style={{fontWeight: "bold"}}>BITRATE</span>
+                  <span style={{display: "flex"}}>
+                    <span>{bitrate} KB/s</span>
+                    <Spacer w={.5} />
+                    <Wifi />
+                  </span>
+                </div>
+                <Spacer w={"12px"} />
+                <div className="stats-item">
+                  <span style={{fontWeight: "bold"}}>PEER</span><Spacer w={.5} />
+                  <span style={{display: "flex"}}>
+                    <span>{Math.floor(delay)} ms</span>
+                    <Spacer w={.5} />
+                    <Infinity />
+                  </span>
+                </div>
+              </Grid.Container>
             </Grid>
           </Grid.Container>
-          <Spacer w={2} />
-          <Grid className="extra">
-            <Grid.Container justify="space-between" alignItems="center">
-              <Text h3 style={{fontSize: 32, marginBottom: 0}}>信息</Text>
-              <Avatar.Group count={2}>
-                <Avatar text="刘" stacked />
-                <Avatar text="Ana" stacked />
-              </Avatar.Group>
-            </Grid.Container>
-            <Spacer h="24px" />
+        </Page.Content>
+        <style jsx="true">{`
+          .interaction-board {
+          }
 
-            <Grid.Container gap={2}>
-              <Grid style={{flex: 1}}>
-                <div style={{
-                  height: 50,
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  borderRadius: 5,
-                  background: "black",
-                  color: "white",
-                  padding: "0 12px"
-                }}>
-                  <Text b style={{fontSize: 16}}>面试官</Text>
-                  <span style={{fontSize: 12}}>已加入</span>
-                </div>
-              </Grid>
-              <Grid style={{flex: 1}}>
-                <div style={{
-                  height: 50,
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  borderRadius: 5,
-                  background: "#fafafa",
-                  color: "#cccccc",
-                  border: "1px #EAEAEA solid",
-                  padding: "0 12px"
-                }}>
-                  <Text b style={{fontSize: 16}}>候选人</Text>
-                  <span style={{fontSize: 12}}>未加入</span>
-                </div>
-              </Grid>
-            </Grid.Container>
-            <Spacer h="24px" />
-            <div className="camera" style={{borderRadius: 50}}>
-              {Model.session.isMe(meetingStatus?.creatorUUID) ? (<>
-                <CameraView ref={oneselfCameraRef}
-                            isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
-                            onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)}
-                            onCameraSwitch={onCameraSwitch} />
-                <Spacer w="24px" />
-                <CameraView ref={otherCameraRef} />
-              </>) : (<>
-                <CameraView ref={otherCameraRef} />
-                <Spacer w="24px" />
-                <CameraView ref={oneselfCameraRef}
-                            isOneself onMicChange={() => onOneselfMicChange(oneselfCameraRef.current?.micOff)}
-                            onCameraChange={() => onOneselfCameraChange(oneselfCameraRef.current?.cameraOff)}
-                            onCameraSwitch={onCameraSwitch} />
-              </>)}
-            </div>
-            <Divider style={{margin: "24px 0"}} />
-          </Grid>
-        </Grid.Container>
-      </Page.Content>
-      <style jsx="true">{`
-        .interaction-board {
-        }
+          .editor {
+            width: 821px;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            padding: 24px;
+            box-shadow: rgba(0, 0, 0, 0.12) 0 30px 60px;
+            border-radius: 5px;
+          }
 
-        .editor {
-          flex: 2;
-          display: flex;
-          flex-direction: column;
-          background: white;
-          padding: 24px;
-          box-shadow: rgba(0, 0, 0, 0.12) 0 30px 60px;
-          border-radius: 5px;
-        }
+          .extra {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            padding: 24px;
+            box-shadow: rgba(0, 0, 0, 0.12) 0 30px 60px;
+            border-radius: 5px;
+            width: 650px;
+          }
 
-        .extra {
-          display: flex;
-          flex-direction: column;
-          background: white;
-          padding: 24px;
-          box-shadow: rgba(0, 0, 0, 0.12) 0 30px 60px;
-          border-radius: 5px;
-          width: 650px;
-        }
+          .camera {
+            display: flex;
+            flex-direction: row;
+          }
 
-        .camera {
-          display: flex;
-          flex-direction: row;
-        }
-      `}</style>
-    </Page>
+          .stats-item {
+            width: 290px;
+            height: 50px;
+            margin-left: 12px;
+            margin-top: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #eaeaea;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            justify-content: space-between;
+            border-radius: 5px;
+            color: #999;
+            background: #fafafa;
+          }
+        `}</style>
+      </Page>
+    </>
   )
 }
 

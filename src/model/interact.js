@@ -21,6 +21,8 @@ export const rtcEvent = {
   micChange: "micChange",
   cameraChange: "cameraChange",
   ack: "ack",
+  join: "join",
+  quit: "quit",
   cursorChange: "cursorChange",
   languageChange: "languageChange",
   judgeResultReceive: "judgeResultReceive",
@@ -38,9 +40,12 @@ export const interactInit = ({
                                onOtherCameraChange,
                                onOperation,
                                onACK,
+                               onJoin,
+                               onQuit,
                                onOtherCursorChange,
                                onOtherLanguageChange,
                                onJudgeResultReceive,
+                               onStats,
                              }) => {
   ws = new WebSocket(url)
   //MozWebSocket
@@ -70,6 +75,12 @@ export const interactInit = ({
         break
       case rtcEvent.ack:
         onACK && onACK(json)
+        break
+      case rtcEvent.join:
+        onJoin && onJoin(json)
+        break
+      case rtcEvent.quit:
+        onQuit && onQuit(json)
         break
       case rtcEvent.cursorChange:
         onOtherCursorChange && onOtherCursorChange(json)
@@ -137,6 +148,33 @@ export const interactInit = ({
       //处理媒体流创建失败错误
       console.error('Call user media is error: ' + error)
     })
+
+  let bytesPrev = 0
+  let timestampPrev = 0
+
+  setInterval(() => {
+    pc.getStats(null).then(stats => {
+      stats.forEach(report => {
+        const now = report.timestamp
+
+        let bitrate
+        if (report.type === 'inbound-rtp' && report.mediaType === 'video') {
+          const bytes = report.bytesReceived
+          if (timestampPrev) {
+            let delay = now - timestampPrev
+            bitrate = (bytes - bytesPrev) / delay
+            bitrate = Math.floor(bitrate)
+            onStats && onStats({
+              bitrate: bitrate,
+              delay: delay
+            })
+          }
+          bytesPrev = bytes
+          timestampPrev = now
+        }
+      })
+    })
+  }, 1000)
 }
 
 export const send = (event, data) => {
