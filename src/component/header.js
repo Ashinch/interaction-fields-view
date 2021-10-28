@@ -42,25 +42,27 @@ export const Header = ({width, title, subtitle, shadow}) => {
       }}>
         <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
           <a href="/">
-            <svg height="26" viewBox="0 0 75 65" fill="var(--geist-foreground)">
+            <svg height="26" viewBox="0 0 75 65">
               <path d="M37.59.25l36.95 64H.64l36.95-64z" />
             </svg>
           </a>
           {subtitle ? subtitle.map(item => {
             return (<>
               <DividerIcon size={36} color="#eaeaea" />
-              <h3 style={{margin: 0}}>{item}</h3>
+              <h4 style={{margin: 0}}>{item}</h4>
             </>)
           }) : (
             <>
               <Spacer w={1} />
-              <h3 style={{margin: 0}}>{title}</h3>
+              <h4 style={{margin: 0}}>{title}</h4>
             </>
           )}
         </div>
         <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
+          <Button auto type="abort" onClick={() => setVisible(true)}>Credit</Button>
           <Button auto type="abort" onClick={() => setVisible(true)}>GitHub</Button>
           <Button auto type="abort" onClick={() => setVisible(true)}>Contact</Button>
+          <Spacer w={1} />
           {Model.session.isLogin() ? (
             <Avatar text={`${Model.session.getInfo().user.username.charAt(0)}`} />
           ) : (

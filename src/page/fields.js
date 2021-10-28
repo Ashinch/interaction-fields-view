@@ -1,7 +1,7 @@
 import {
   Avatar,
   Breadcrumbs,
-  Button, Card, Code,
+  Button, Card, Checkbox, Code, Description,
   Divider,
   Grid, Note,
   Page,
@@ -50,6 +50,7 @@ const Fields = () => {
   const [loading, setLoading] = useState(true)
   const [editValue, setEditValue] = useState("")
   const [meetingStatus, setMeetingStatus] = useState()
+  const [duration, setDuration] = useState()
   const [userJoin, setUserJoin] = useState()
   const [bitrate, setBitrate] = useState()
   const [delay, setDelay] = useState()
@@ -78,6 +79,33 @@ const Fields = () => {
         isCreator: Model.session.isMe(res.data.creatorUUID),
         cameraDeviceID: "cameraDeviceID"
       })
+
+      setInterval(() => {
+        if (res.data == null) return
+        const createAt = new Date(res.data?.createAt).getTime()
+        const now = new Date().getTime()
+        const diff = now - createAt
+
+        /* 计算剩余小时数 */
+        let hours = parseInt(diff / 1000 / (60 * 60), 10)
+        /* 计算剩余分钟数 */
+        let minutes = parseInt(diff / 1000 / 60 % 60, 10)
+        /* 计算剩余秒数 */
+        let seconds = parseInt(diff / 1000 % 60, 10)
+
+        /* 如果小于10，则在数字前面添加0 */
+        if (hours < 10) {
+          hours = '0' + hours
+        }
+        if (minutes < 10) {
+          minutes = '0' + minutes
+        }
+        if (seconds < 10) {
+          seconds = '0' + seconds
+        }
+
+        setDuration(hours + "小时 " + minutes + "分 " + seconds + "秒")
+      }, 1000)
     }).catch((err) => {
       setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
       history.push("/")
@@ -403,8 +431,14 @@ const Fields = () => {
             <Spacer w={2} />
             <Grid className="extra">
               <Grid.Container justify="space-between" alignItems="center">
-                <Text h3 style={{fontSize: 32, marginBottom: 0}}>信息</Text>
-                <Button auto type="error" ghost iconRight={<Power />} onClick={onRunClick}>结束会议</Button>
+                <div style={{display: "flex", alignItems: "center"}}>
+                  <Clock />
+                  <Spacer w={1} />
+                  <Description title="会议进行时长：27分钟后提醒" content={duration} />
+                </div>
+                <div style={{display: "flex"}}>
+                  <Button auto type="error" ghost iconRight={<Power />} onClick={onRunClick}>结束会议</Button>
+                </div>
               </Grid.Container>
               <Divider style={{margin: "24px 0"}} />
               <div className="camera" style={{borderRadius: 50}}>
