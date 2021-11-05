@@ -10,12 +10,18 @@ import {
   Spacer,
   Textarea,
   Modal,
-  Code, useModal
+  Code, useModal, AutoComplete
 } from '@geist-ui/react'
 import { useEffect, useState } from "react"
 import "../util/bee.js"
 
 const Login = ({isSMS, setUsername, setPassword}) => {
+  const options = [
+    {label: '测试账号a', value: 'a'},
+    {label: '测试账号b', value: 'b'},
+    {label: '测试账号c', value: 'c'},
+  ]
+
   return (
     <>
       {isSMS ? (
@@ -29,9 +35,10 @@ const Login = ({isSMS, setUsername, setPassword}) => {
         </div>
       ) : (
         <div>
-          <Input scale={4 / 3} width="100%" placeholder="账号" initialValue="a" onChange={e => setUsername(e.target.value)} />
+          <AutoComplete scale={4 / 3} width="100%" placeholder="账号" initialValue="a" options={options} onChange={e => setUsername(e)} />
           <Spacer h={.5} />
-          <Input.Password scale={4 / 3} width="100%" placeholder="密码" initialValue="123" onChange={e => setPassword(e.target.value)} />
+          <Input.Password scale={4 / 3} width="100%" placeholder="密码" initialValue="123"
+                          onChange={e => setPassword(e.target.value)} />
         </div>
       )}
     </>

@@ -1,18 +1,19 @@
 import { Divider as DividerIcon } from "@geist-ui/react-icons"
-import { Avatar, Button, Divider, Modal, Spacer, useModal, useToasts } from "@geist-ui/react"
+import { Avatar, Button, Divider, Link, Modal, Popover, Spacer, useModal, useToasts } from "@geist-ui/react"
 import { Model } from "../model/model"
 import Login from "./login"
 import { useState } from "react"
+import { getAvatarStyle, getRandomColor } from "../util/hash"
+import { useHistory } from "react-router-dom"
 
 export const Header = ({width, title, subtitle, shadow}) => {
-
+  const history = useHistory()
   const [username, setUsername] = useState("a")
   const [password, setPassword] = useState("123")
   const [isSMS, setIsSMS] = useState()
   const [isLoginLoading, setIsLoginLoading] = useState()
   const {visible, setVisible, bindings} = useModal()
   const [toasts, setToast] = useToasts()
-
   const login = () => {
     setIsLoginLoading(true)
     Model.session.login({
@@ -27,6 +28,33 @@ export const Header = ({width, title, subtitle, shadow}) => {
     }).finally(() => {
       setIsLoginLoading(false)
     })
+  }
+
+  const logout = () => {
+    Model.session.clearInfo()
+  }
+
+  const popContent = () => (
+    <div>
+      <Popover.Item>
+        <Link href="#" onClick={onClickAvatar}>发起新会议&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</Link>
+      </Popover.Item>
+      <Popover.Item>
+        <Link href="/personal/record">会议记录&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</Link>
+      </Popover.Item>
+      <Popover.Item line />
+      <Popover.Item>
+        <Link href="/personal/settings">账号设置&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</Link>
+      </Popover.Item>
+      <Popover.Item>
+        <Link href="/"
+              onClick={logout}>退出&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</Link>
+      </Popover.Item>
+    </div>
+  )
+
+  const onClickAvatar = (e) => {
+    console.log(getRandomColor("109fa65f-76cb-42a0-8da6-ca78ec81d5f9"))
   }
 
   return (
@@ -46,25 +74,31 @@ export const Header = ({width, title, subtitle, shadow}) => {
               <path d="M37.59.25l36.95 64H.64l36.95-64z" />
             </svg>
           </a>
-          {subtitle ? subtitle.map(item => {
-            return (<>
-              <DividerIcon size={36} color="#eaeaea" />
-              <h4 style={{margin: 0}}>{item}</h4>
-            </>)
+          {subtitle ? subtitle.map((item, index) => {
+            return (
+              <div key={index} style={{display: "flex", alignItems: "center", userSelect: "none"}}>
+                <DividerIcon size={36} color="#eaeaea" />
+                <h4 style={{margin: 0}}>{item}</h4>
+              </div>
+            )
           }) : (
             <>
               <Spacer w={1} />
-              <h4 style={{margin: 0}}>{title}</h4>
+              <h4 style={{margin: 0, userSelect: "none"}}>{title}</h4>
             </>
           )}
         </div>
         <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
-          <Button auto type="abort" onClick={() => setVisible(true)}>Credit</Button>
-          <Button auto type="abort" onClick={() => setVisible(true)}>GitHub</Button>
-          <Button auto type="abort" onClick={() => setVisible(true)}>Contact</Button>
-          <Spacer w={1} />
+          <Button auto type="abort" onClick={() => window.open("https://github.com/Ashinch/interaction-fields")}>GitHub</Button>
+          <Button auto type="abort" onClick={() => {}}>Credit</Button>
+          <Button auto type="abort" onClick={() => {}}>About</Button>
           {Model.session.isLogin() ? (
-            <Avatar text={`${Model.session.getInfo().user.username.charAt(0)}`} />
+            <>
+              <Spacer w={1} />
+              <Popover content={popContent} style={{cursor: "pointer"}}>
+                <Avatar className="avatar" text={`${Model.session.getInfo().user?.name.charAt(0)}`} />
+              </Popover>
+            </>
           ) : (
             <>
               <Button auto type="abort">注册</Button>
@@ -84,6 +118,12 @@ export const Header = ({width, title, subtitle, shadow}) => {
         <Modal.Action passive onClick={() => setIsSMS(!isSMS)}>{isSMS ? "使用账号密码方式" : "使用短信验证方式"}</Modal.Action>
         <Modal.Action onClick={login} loading={isLoginLoading}>登录</Modal.Action>
       </Modal>
+
+      <style jsx="true">{`
+        .avatar {
+          ${getAvatarStyle(Model.session.getInfo()?.user?.uuid?.split("-")[4])}
+        }
+      `}</style>
     </div>
   )
 }

@@ -1,6 +1,8 @@
 let ws
 let pc
 let rtcStream
+let statsInterval
+let isConnected = true
 
 // stun和turn服务器
 export const iceServer = {
@@ -26,7 +28,10 @@ export const rtcEvent = {
   cursorChange: "cursorChange",
   languageChange: "languageChange",
   judgeResultReceive: "judgeResultReceive",
-  operation: "operation"
+  operation: "operation",
+  remind: "remind",
+  hidden: "hidden",
+  note: "note",
 }
 
 export const interactInit = ({
@@ -34,11 +39,14 @@ export const interactInit = ({
                                isCreator,
                                cameraDeviceID,
                                onConnected,
-                               onAddOneselfStream,
+                               onDisconnected,
+                               onAddSelfStream,
                                onAddOtherStream,
                                onOtherMicChange,
                                onOtherCameraChange,
                                onOperation,
+                               onRemind,
+                               onHidden,
                                onACK,
                                onJoin,
                                onQuit,
@@ -55,7 +63,7 @@ export const interactInit = ({
 
   //处理到来的信令
   ws.onmessage = (event) => {
-    console.info('Received: ', event)
+    console.info('Received: ', JSON.parse(event.data))
     const json = JSON.parse(event.data)
     switch (json.event) {
       case rtcEvent.connected:
@@ -72,6 +80,12 @@ export const interactInit = ({
         break
       case rtcEvent.operation:
         onOperation && onOperation(json)
+        break
+      case rtcEvent.remind:
+        onRemind && onRemind(json)
+        break
+      case rtcEvent.hidden:
+        onHidden && onHidden(json)
         break
       case rtcEvent.ack:
         onACK && onACK(json)
@@ -102,6 +116,12 @@ export const interactInit = ({
     }
   }
 
+  ws.onerror = (event) => {
+    console.log("onerror", event)
+    isConnected = false
+    onDisconnected && onDisconnected(event)
+  }
+
   pc = new RTCPeerConnection(iceServer)
 
   pc.onicecandidate = (event) => {
@@ -114,6 +134,42 @@ export const interactInit = ({
   pc.onaddstream = (event) => {
     console.info("onAddOtherStream")
     onAddOtherStream && onAddOtherStream(event.stream)
+    let bytesPrev = 0
+    let bytesTimestampPrev = 0
+    let delayTimestampPrev = 0
+
+    let bitrate
+    let delay
+    clearInterval(statsInterval)
+    statsInterval = setInterval(() => {
+      pc.getStats(null).then(stats => {
+        stats.forEach(report => {
+          const now = report.timestamp
+
+          if (report.type === 'outbound-rtp' && report.mediaType === 'video') {
+            const bytes = report.bytesSent
+            if (bytesTimestampPrev) {
+              bitrate = (bytes - bytesPrev) / (now - bytesTimestampPrev)
+              bitrate = Math.floor(bitrate)
+            }
+            bytesPrev = bytes
+            bytesTimestampPrev = now
+          }
+
+          if (report.type === 'inbound-rtp' && report.mediaType === 'video') {
+            if (delayTimestampPrev) {
+              delay = now - delayTimestampPrev
+            }
+            delayTimestampPrev = now
+          }
+
+          onStats && onStats({
+            bitrate: bitrate,
+            delay: delay
+          })
+        })
+      })
+    }, 1000)
   }
 
   navigator.getUserMedia =
@@ -131,10 +187,11 @@ export const interactInit = ({
       },
     },
     (stream) => {
-      console.info("onAddOneselfStream")
+      if (!isConnected) return
+      console.info("onAddSelfStream")
       rtcStream = stream
-      onOneselfMicChange(false)
-      onAddOneselfStream && onAddOneselfStream(stream)
+      onSelfMicChange(false)
+      onAddSelfStream && onAddSelfStream(stream)
       pc.addStream(stream)
       //如果是发起方则发送一个offer信令
       // if (isCreator != null && !isCreator) {
@@ -148,33 +205,6 @@ export const interactInit = ({
       //处理媒体流创建失败错误
       console.error('Call user media is error: ' + error)
     })
-
-  let bytesPrev = 0
-  let timestampPrev = 0
-
-  setInterval(() => {
-    pc.getStats(null).then(stats => {
-      stats.forEach(report => {
-        const now = report.timestamp
-
-        let bitrate
-        if (report.type === 'inbound-rtp' && report.mediaType === 'video') {
-          const bytes = report.bytesReceived
-          if (timestampPrev) {
-            let delay = now - timestampPrev
-            bitrate = (bytes - bytesPrev) / delay
-            bitrate = Math.floor(bitrate)
-            onStats && onStats({
-              bitrate: bitrate,
-              delay: delay
-            })
-          }
-          bytesPrev = bytes
-          timestampPrev = now
-        }
-      })
-    })
-  }, 1000)
 }
 
 export const send = (event, data) => {
@@ -185,12 +215,12 @@ export const send = (event, data) => {
   console.info("Send", event)
 }
 
-export const onOneselfMicChange = (enabled) => {
+export const onSelfMicChange = (enabled) => {
   rtcStream && rtcStream.getAudioTracks().forEach(i => i.enabled = enabled)
   send(rtcEvent.micChange, !enabled)
 }
 
-export const onOneselfCameraChange = (enabled) => {
+export const onSelfCameraChange = (enabled) => {
   rtcStream && rtcStream.getVideoTracks().forEach(i => i.enabled = enabled)
   send(rtcEvent.cameraChange, !enabled)
 }

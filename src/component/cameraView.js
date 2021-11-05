@@ -5,8 +5,17 @@ import { Avatar, Card, Select, Slider, Spacer, Text } from "@geist-ui/react"
 import { getDevices } from "../model/interact"
 import { Model } from "../model/model"
 import User from "@geist-ui/react-icons/user"
+import { getAvatarStyle } from "../util/hash"
 
-const CameraView = forwardRef(({isOneself, isCreator, userJoin, onMicChange, onCameraChange, onCameraSwitch}, ref) => {
+const CameraView = forwardRef(({
+                                 connected,
+                                 isSelf,
+                                 isCreator,
+                                 userJoin,
+                                 onMicChange,
+                                 onCameraChange,
+                                 onCameraSwitch
+                               }, ref) => {
   const videoRef = useRef()
   const [micOff, setMicOff] = useState(true)
   const [cameraOff, setCameraOff] = useState(false)
@@ -14,7 +23,7 @@ const CameraView = forwardRef(({isOneself, isCreator, userJoin, onMicChange, onC
   const [cameraDevices, setCameraDevices] = useState([])
 
   useEffect(() => {
-    isOneself && getDevices((devices) => {
+    connected && isSelf && getDevices((devices) => {
       const cameras = devices.filter((device) => device.kind === "videoinput")
       console.log(cameras)
       setCameraDevices(cameras)
@@ -59,32 +68,31 @@ const CameraView = forwardRef(({isOneself, isCreator, userJoin, onMicChange, onC
         display: "flex",
         flexDirection: "column",
       }}>
-        <div className={"label " + ((userJoin != null || isOneself) ? "" : "label-not-join")}>
+        <div className={"label " + ((userJoin != null || (isSelf && connected)) ? "" : "label-not-join")}>
           <Text b style={{
-            color: (userJoin != null || isOneself) ? "white" : "#cccccc",
+            color: (userJoin != null || (isSelf && connected)) ? "white" : "#cccccc",
             fontSize: 16
           }}>
             {isCreator ? "面试官" : "候选人"}
           </Text>
           <span>
-            {(userJoin != null || isOneself)
-              ? <Avatar className={isCreator ? "interviewer" : "candidate"}
-                        text={isOneself ? Model.session.getInfo().user.username : userJoin?.username} />
-              : <span style={{color: "#cccccc", fontSize: 12}}>未加入</span>
+            {(userJoin != null || (isSelf && connected))
+              ? <Avatar className={isSelf ? "avatar-self" : "avatar-other"}
+                        text={isSelf ? Model.session.getInfo()?.user?.name?.charAt(0) : userJoin?.name.charAt(0)} />
+              : <span style={{color: "#cccccc", fontSize: 12}}>{(isSelf && !connected) ? "未连接" : "未加入"}</span>
             }
 
           </span>
         </div>
 
-        {(userJoin != null || isOneself)
+        {(userJoin != null || isSelf)
           ? <video style={{
             border: "1px solid #eaeaea",
             borderRadius: 5,
             width: 289,
             height: 289,
             background: "#fafafa",
-          }} ref={videoRef} autoPlay muted={isOneself} draggable={false}
-          />
+          }} ref={videoRef} autoPlay muted={isSelf} draggable={false} />
           : <div style={{
             border: "1px solid #eaeaea",
             borderRadius: 5,
@@ -94,20 +102,19 @@ const CameraView = forwardRef(({isOneself, isCreator, userJoin, onMicChange, onC
             display: "flex",
             justifyContent: "center",
             alignItems: "center"
-          }}
-          >
+          }}>
             <User size={150} color="#ccc" />
           </div>
         }
         <Spacer h={1.5} />
         <Card className="control" height="110px">
           <div className="control-item">
-            <div className="flex-items-center pointer" onClick={isOneself && onClickCameraOff}>{isOneself
+            <div className="flex-items-center pointer" onClick={isSelf && onClickCameraOff}>{(isSelf && connected)
               ? cameraOff || !(cameraDevices[0] && cameraDevices[0].deviceId) ? <CameraOff color="#aaa" /> : <Camera />
               : cameraOff || userJoin == null ? <CameraOff color="#aaa" /> : <Camera />
             }</div>
             <Spacer w={1.2} />
-            {isOneself ? (cameraDevices[0]?.deviceId && !cameraOff ? (
+            {(isSelf && connected) ? (cameraDevices[0]?.deviceId && !cameraOff ? (
                 <Select placeholder="未检测到摄像设备" width="210px"
                         value={selectValue}
                         onChange={onSwitch}
@@ -122,28 +129,24 @@ const CameraView = forwardRef(({isOneself, isCreator, userJoin, onMicChange, onC
           </div>
           <Spacer w={1} />
           <div className="control-item">
-            <div className="flex-items-center pointer" onClick={isOneself && onClickMicOff}>{isOneself
+            <div className="flex-items-center pointer" onClick={isSelf && onClickMicOff}>{(isSelf && connected)
               ? micOff ? <MicOff color="#aaa" /> : <Mic />
               : micOff || userJoin == null ? <VolumeX color="#aaa" /> : <Volume2 />
             }</div>
             <Spacer w={1.2} />
             <Slider h={1.2} width="75%" initialValue={100}
-                    disabled={isOneself ? micOff : userJoin == null || micOff} />
+                    disabled={(isSelf && connected) ? micOff : userJoin == null || micOff} />
           </div>
         </Card>
       </div>
 
       <style jsx="true">{`
-        .interviewer {
-          color: white !important;
-          border: 1px solid #7928CA !important;
-          background-color: #7928CA !important;
+        .avatar-self {
+          ${getAvatarStyle(Model.session.getInfo()?.user?.uuid?.split("-")[4])}
         }
 
-        .candidate {
-          color: white !important;
-          border: 1px solid #FF4D4D !important;
-          background-color: #FF4D4D !important;
+        .avatar-other {
+          ${getAvatarStyle(userJoin?.uuid.split("-")[4])}
         }
 
         .label {

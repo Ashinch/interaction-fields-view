@@ -16,7 +16,7 @@ const CompileRecord = ({meetingUUID}) => {
   const [modalSubTitle, setModalSubTitle] = useState()
 
   useEffect(() => {
-    getRecordList(1, 9)
+    getRecordList(1, 8)
 
     return () => {
     }
@@ -36,7 +36,8 @@ const CompileRecord = ({meetingUUID}) => {
         item.realTime = item.realTime ? item.realTime + " ms" : "0 ms"
         const memory = item.memory ? item.memory : 0
         item.memory = memory.toString().length < 4 ? memory + " KB" : (memory / 1024).toFixed(1) + " MB"
-        item.status && (item.statusFormat = <font color={item.status.id === 1 ? "green" : "red"}>{item.status.name}</font>)
+        item.status && (item.statusFormat =
+          <font color={item.status.id === 1 ? "green" : "red"}>{item.status.name}</font>)
         item.commit = <a onClick={() => onBinaryClick(item)}>查看</a>
         item.output = <a onClick={() => onResultClick(item)}>查看</a>
       })
@@ -50,7 +51,7 @@ const CompileRecord = ({meetingUUID}) => {
   }
 
   const onPaginationChange = (e) => {
-    getRecordList(e, 9)
+    getRecordList(e, 8)
   }
 
   const onBinaryClick = (item) => {
@@ -101,11 +102,11 @@ const CompileRecord = ({meetingUUID}) => {
       </div>
       <Modal visible={showModal} onClose={onCloseModal}>
         <Modal.Title>{modalTitle}</Modal.Title>
-        <Modal.Subtitle>{modalSubTitle}</Modal.Subtitle>
         <Modal.Content>
-          <Textarea initialValue={modalContent} width="100%" height="200px" />
+          <Textarea initialValue={modalContent} readOnly width="100%" height="200px" />
         </Modal.Content>
       </Modal>
+      <Spacer h={1.5} />
       <style jsx="true">{`
         .pageControl {
           display: flex;

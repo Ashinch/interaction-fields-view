@@ -38,9 +38,13 @@ const PREFIX = '/api'
 
 export const API = {
   userLogin: PREFIX + '/user-service/login',
+  userLogout: PREFIX + '/user-service/logout',
   userSignUp: PREFIX + '/user-service/signUp',
+  userEdit: PREFIX + '/user-service/edit',
+  userChangePwd: PREFIX + '/user-service/changePwd',
   meetingCreate: PREFIX + '/meeting-service/create',
   meetingStatusByCode: PREFIX + '/meeting-service/statusByCode/',
+  meetingRecord: PREFIX + '/meeting-service/record',
   judgeCommit: PREFIX + '/judge-service/commit',
   judgeRecord: PREFIX + '/judge-service/record',
   judgeBinary: PREFIX + '/judge-service/binary/',

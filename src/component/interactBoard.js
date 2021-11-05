@@ -24,7 +24,7 @@ import 'codemirror/mode/python/python.js'
 import 'codemirror/mode/perl/perl.js'
 import 'codemirror/mode/clike/clike.js'
 
-const InteractionBoard = forwardRef(({editValue, language, onBeforeChange, onCursorActivity}, ref) => {
+const InteractBoard = forwardRef(({editValue, language, onChange: onChange, onCursorActivity}, ref) => {
   const codeMirrorRef = useRef()
 
   useImperativeHandle(ref, () => ({
@@ -68,18 +68,22 @@ const InteractionBoard = forwardRef(({editValue, language, onBeforeChange, onCur
           coverGutterNextToScrollbar: false,
           autoCloseBrackets: true
         }}
-        onChange={onBeforeChange}
-        // onBeforeChange={onBeforeChange}
+        onChange={onChange}
         spellcheck
         onCursorActivity={onCursorActivity}
         editorDidMount={(editor) => {
-          editor.setSize(770, 600)
+          editor.setSize(770, 530)
         }}
       />
 
       <style jsx="true">{`
         .other-line {
           background: #f6e3ff;
+        }
+        
+        .CodeMirror-gutters {
+          border: unset !important;
+          background-color: #fafafa !important;
         }
       `}</style>
     </>
@@ -133,4 +137,4 @@ export const editorLang = [
   "text/x-c++src",
 ]
 
-export default InteractionBoard
+export default InteractBoard
