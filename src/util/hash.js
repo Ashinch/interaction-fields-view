@@ -10,7 +10,7 @@ export const getHashCode = (str) => {
 }
 
 export const getRandomColor = (seed) => {
-  return '#D' + (((getHashCode(seed) * 9301 + 49297) % 233280) / 233280.0 * 0xffff00 << 0)
+  return '#F' + (((getHashCode(seed) * 9301 + 49297) % 233280) / 233280.0 * 0xffff00 << 0)
     .toString(16)
     .substr(0, 5)
 }

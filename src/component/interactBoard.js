@@ -37,15 +37,54 @@ const InteractBoard = forwardRef(({editValue, language, onChange: onChange, onCu
     getSelection: () => {
       return codeMirrorRef?.current?.editor.getSelection()
     },
-    markLine: (lineNumber) => {
+    clearOtherCursor: () => {
       codeMirrorRef?.current?.editor.getAllMarks().forEach(item => item.clear())
-      codeMirrorRef?.current?.editor.markText({line: lineNumber, ch: 0}, {line: lineNumber, ch: 10000}, {
-        className: "other-line",
-        // readonly: true,
-        // atomic: true,
-        selectLeft: false,
-        selectRight: false
-      })
+    },
+    setOtherCursor: (cursorPos, color, word) => {
+      codeMirrorRef?.current?.editor.getAllMarks().forEach(item => item.clear())
+
+      let cursorCoords = codeMirrorRef?.current?.editor.doc.cm.cursorCoords(cursorPos, "local")
+      let startCoords = codeMirrorRef?.current?.editor.doc.cm.charCoords({line: 0, ch: 0}, "local")
+      let lineHeight = codeMirrorRef?.current?.editor.doc.cm.defaultTextHeight()
+      let top = (cursorCoords.top - startCoords.top) % lineHeight
+      let left = cursorCoords.left + 0.5
+
+      let cursorEl = document.createElement('span')
+      cursorEl.className = 'other-cursor'
+      cursorEl.style.display = 'inline-block'
+      cursorEl.style.position = 'absolute'
+      cursorEl.style.top = top + 'px'
+      cursorEl.style.left = left + 'px'
+      cursorEl.style.padding = '0px'
+      cursorEl.style.marginLeft = cursorEl.style.marginRight = '-1px'
+      cursorEl.style.borderLeftWidth = '2px'
+      cursorEl.style.borderLeftStyle = 'solid'
+      cursorEl.style.borderLeftColor = color
+      cursorEl.style.height = lineHeight + 'px'
+      codeMirrorRef?.current?.editor.doc.cm.setBookmark(cursorPos, {widget: cursorEl, insertLeft: true})
+
+      let nameEl = document.createElement('span')
+      nameEl.className = "other-name"
+      nameEl.style.display = cursorEl.style.display
+      nameEl.style.position = cursorEl.style.position
+      nameEl.style.left = cursorEl.style.left
+      nameEl.style.padding = cursorEl.style.padding
+      nameEl.style.marginLeft = cursorEl.style.marginRight = cursorEl.style.marginLeft
+
+      nameEl.style.top = top + lineHeight - 4 + 'px'
+      nameEl.style.height = lineHeight - 4 + 'px'
+      nameEl.style.width = '20px'
+      nameEl.style.borderRadius = '4px'
+      nameEl.style.fontSize = '12px'
+      nameEl.style.fontWeight = 'bold'
+      nameEl.style.lineHeight = lineHeight - 4 + 'px'
+      nameEl.style.textAlign = 'center'
+      nameEl.style.color = '#fff'
+      nameEl.style.backgroundColor = color
+
+      let nameTN = document.createTextNode(word)
+      nameEl.appendChild(nameTN)
+      codeMirrorRef?.current?.editor.doc.cm.setBookmark(cursorPos, {widget: nameEl, insertLeft: true})
     }
   }))
 
@@ -80,7 +119,7 @@ const InteractBoard = forwardRef(({editValue, language, onChange: onChange, onCu
         .other-line {
           background: #f6e3ff;
         }
-        
+
         .CodeMirror-gutters {
           border: unset !important;
           background-color: #fafafa !important;

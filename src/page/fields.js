@@ -36,9 +36,11 @@ import Activity from "@geist-ui/react-icons/activity"
 import Wifi from "@geist-ui/react-icons/wifi"
 import Infinity from "@geist-ui/react-icons/infinity"
 import Power from "@geist-ui/react-icons/power"
+import { getAvatarStyle, getRandomColor } from "../util/hash"
 
 let client
 let remindInterval
+let userJoinPage
 
 const Fields = () => {
   const history = useHistory()
@@ -48,7 +50,7 @@ const Fields = () => {
   const [meetingStatus, setMeetingStatus] = useState()
   const [duration, setDuration] = useState()
   const [isConnected, setConnected] = useState(true)
-  const [userJoin, setUserJoin] = useState()
+  const [userJoin, setUserJoin] = useState(null)
   const [remind, setRemind] = useState("设定提醒")
   const [bitrate, setBitrate] = useState()
   const [delay, setDelay] = useState()
@@ -299,11 +301,23 @@ const Fields = () => {
   }
 
   const onJoin = (json) => {
+    console.log("onJoin", json.data)
     setUserJoin(json.data)
+    userJoinPage = json.data
+    setToast({
+      text: json.data.name + "加入会议",
+      type: "success",
+    })
   }
 
   const onQuit = (json) => {
+    interactionBoard?.current?.clearOtherCursor()
     setUserJoin(null)
+    userJoinPage = null
+    setToast({
+      text: json.data.name + "退出会议",
+      type: "error",
+    })
   }
 
   const onOperation = (json) => {
@@ -360,8 +374,11 @@ const Fields = () => {
   }
 
   const onOtherCursorChange = (json) => {
-    console.log(json)
-    interactionBoard?.current?.markLine(json.data.line)
+    console.log("userJoin", userJoin)
+    let user = userJoin || userJoinPage
+    if (user == null) return
+    const color = getRandomColor(user.uuid.split("-")[4])
+    interactionBoard?.current?.setOtherCursor(json.data, color, user.name.charAt(0))
   }
 
   const onSelfLanguageChange = (e, isSend = true) => {
@@ -403,14 +420,14 @@ const Fields = () => {
       code = selectedValue
     }
     setIsRun(true)
-    Model.judge.commit({meetingUUID: meetingStatus.uuid, typeID: typeID, code: code})
-      .then((res) => {
-        console.log(res)
-      })
-      .catch((err) => {
-        setIsRun(false)
-        console.log(err)
-      })
+    Model.judge.commit({
+      meetingUUID: meetingStatus.uuid, typeID: typeID, code: code
+    }).then((res) => {
+      console.log(res)
+    }).catch((err) => {
+      setIsRun(false)
+      console.log(err)
+    })
   }
 
   const onJudgeResultReceive = (json) => {
@@ -504,16 +521,16 @@ const Fields = () => {
                       ? <Loading type="success" width={4} />
                       : <Popover content={<div>
                         <Popover.Item onClick={() => onRemindClick(5)}>
-                          <Link style={{fontSize: 14}} href={null} block>5分钟后</Link>
+                          <Link style={{fontSize: 14, fontWeight: "bold"}} href={null} block>5分钟后</Link>
                         </Popover.Item>
                         <Popover.Item onClick={() => onRemindClick(10)}>
-                          <Link style={{fontSize: 14}} href={null} block>10分钟后</Link>
+                          <Link style={{fontSize: 14, fontWeight: "bold"}} href={null} block>10分钟后</Link>
                         </Popover.Item>
                         <Popover.Item onClick={() => onRemindClick(15)}>
-                          <Link style={{fontSize: 14}} href={null} block>15分钟后</Link>
+                          <Link style={{fontSize: 14, fontWeight: "bold"}} href={null} block>15分钟后</Link>
                         </Popover.Item>
                         <Popover.Item onClick={() => onRemindClick(30)}>
-                          <Link style={{fontSize: 14}} href={null} block>30分钟后</Link>
+                          <Link style={{fontSize: 14, fontWeight: "bold"}} href={null} block>30分钟后</Link>
                         </Popover.Item>
                       </div>}>
                         <Link style={{fontSize: 14, fontWeight: "bold"}} href={null} block>{remind}</Link>
