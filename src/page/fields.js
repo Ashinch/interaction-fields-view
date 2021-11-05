@@ -120,7 +120,6 @@ const Fields = () => {
       window.onbeforeunload = (e) => {
         e.returnValue = "确定离开当前页面吗？"
       }
-
     }).catch((err) => {
       setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
       history.push("/")
@@ -195,35 +194,31 @@ const Fields = () => {
       onStats: onStats
     })
 
-  const onSelfEditChange = (editor, data, value) => {
-    setCanRun(value.length <= 0)
-    // setEditValue(value)
-    if (data.origin === undefined) {
+  const onSelfEditChange = (editor, changes) => {
+    console.log("onSelfEditChange", editor, changes)
+    setCanRun(editor.doc.getValue()?.length <= 0)
+    if (changes[0].origin === undefined) {
       return
     }
-    console.log(data, editor.doc.cm.indexFromPos(data.from))
-
     const codemirrorDocLength = (doc) => {
       return doc.indexFromPos({line: doc.lastLine(), ch: 0}) +
         doc.getLine(doc.lastLine()).length
     }
 
-    let docEndLength = codemirrorDocLength(editor.doc.cm)
+    let docEndLength = codemirrorDocLength(editor.doc)
     let operation = new TextOperation().retain(docEndLength)
     let inverse = new TextOperation().retain(docEndLength)
 
-    let indexFromPos = function (pos) {
-      return editor.doc.cm.indexFromPos(pos)
+    let indexFromPos = (pos) => {
+      return editor.doc.indexFromPos(pos)
     }
 
-    function last(arr) {
+    const last = (arr) => {
       return arr[arr.length - 1]
     }
 
     const sumLengths = (strArr) => {
-      if (strArr.length === 0) {
-        return 0
-      }
+      if (strArr.length === 0) return 0
       let sum = 0
       for (let i = 0; i < strArr.length; i++) {
         sum += strArr[i].length
@@ -233,9 +228,7 @@ const Fields = () => {
 
     const updateIndexFromPos = (indexFromPos, change) => {
       return function (pos) {
-        if (posLe(pos, change.from)) {
-          return indexFromPos(pos)
-        }
+        if (posLe(pos, change.from)) return indexFromPos(pos)
         if (posLe(change.to, pos)) {
           return indexFromPos({
             line: pos.line + change.text.length - 1 - (change.to.line - change.from.line),
@@ -255,25 +248,29 @@ const Fields = () => {
       }
     }
 
-    indexFromPos = updateIndexFromPos(indexFromPos, data)
+    for (let i = changes.length - 1; i >= 0; i--) {
+      let change = changes[i]
+      indexFromPos = updateIndexFromPos(indexFromPos, change)
 
-    let fromIndex = indexFromPos(data.from)
-    let restLength = docEndLength - fromIndex - sumLengths(data.text)
+      let fromIndex = indexFromPos(change.from)
+      let restLength = docEndLength - fromIndex - sumLengths(change.text)
 
-    operation = new TextOperation()
-      .retain(fromIndex)
-      ['delete'](sumLengths(data.removed))
-      .insert(data.text.join('\n'))
-      .retain(restLength)
-      .compose(operation)
+      operation = new TextOperation()
+        .retain(fromIndex)
+        ['delete'](sumLengths(change.removed))
+        .insert(change.text.join('\n'))
+        .retain(restLength)
+        .compose(operation)
 
-    inverse = inverse.compose(new TextOperation()
-      .retain(fromIndex)
-      ['delete'](sumLengths(data.text))
-      .insert(data.removed.join('\n'))
-      .retain(restLength)
-    )
+      inverse = inverse.compose(new TextOperation()
+        .retain(fromIndex)
+        ['delete'](sumLengths(change.text))
+        .insert(change.removed.join('\n'))
+        .retain(restLength)
+      )
 
+      docEndLength += sumLengths(change.removed) - sumLengths(change.text)
+    }
     console.log(`operation: ${JSON.stringify(operation)}, inverse: ${JSON.stringify(inverse)}`)
     client.applyClient(operation)
   }
@@ -281,7 +278,7 @@ const Fields = () => {
   const onConnected = (json) => {
     // if (!(json.data.ops instanceof Array)) return
     client = new Client(json.data.version)
-    client.setCM(interactionBoard?.current?.getEditor().doc.cm)
+    client.setCM(interactionBoard?.current?.getCM())
     if (Bee.StringUtils.isNotBlank(json.data.content)) {
       interactionBoard?.current?.replaceRange(json.data.content, {line: 0, ch: 0})
     } else {
@@ -322,7 +319,7 @@ const Fields = () => {
 
   const onOperation = (json) => {
     if (!(json.data.ops instanceof Array)) return
-    client.applyServer(json.data.version, json.data.ops)
+    client.applyServer(json.data.version, TextOperation.fromJSON(json.data.ops))
   }
 
   const onRemind = (json) => {
@@ -374,7 +371,6 @@ const Fields = () => {
   }
 
   const onOtherCursorChange = (json) => {
-    console.log("userJoin", userJoin)
     let user = userJoin || userJoinPage
     if (user == null) return
     const color = getRandomColor(user.uuid.split("-")[4])
@@ -414,7 +410,7 @@ const Fields = () => {
   }
 
   const onRunClick = () => {
-    let code = editValue
+    let code = interactionBoard?.current?.getValue()
     const selectedValue = interactionBoard?.current?.getSelection()
     if (Bee.StringUtils.isNotBlank(selectedValue)) {
       code = selectedValue
@@ -491,7 +487,8 @@ const Fields = () => {
                     <Spacer h={1} />
                     <div id="ss" ref={codeDivRef} style={{display: "flex", flex: "1", height: "auto"}}>
                       <InteractBoard ref={interactionBoard} editValue={editValue} language={language}
-                                     onChange={onSelfEditChange} onCursorActivity={onSelfCursorChange} />
+                                     onChanges={onSelfEditChange}
+                                     onChange={null} onCursorActivity={onSelfCursorChange} />
                     </div>
                   </Tabs.Item>
                   <Tabs.Item label={<><FileText />笔记</>} value="2" height="50px">
@@ -617,7 +614,7 @@ const Fields = () => {
             ]}>
               <Table.Column prop="language" label="语言" />
               <Table.Column prop="compiler" label="编译器" />
-              <Table.Column prop="args" label="参数" />
+              <Table.Column prop="args" label="编译参数" />
               <Table.Column prop="version" label="版本号" />
             </Table>
           </Modal.Content>

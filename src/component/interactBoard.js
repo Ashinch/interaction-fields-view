@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 import "../util/bee.js"
 
 import { UnControlled as CodeMirror } from "react-codemirror2"
@@ -24,12 +24,22 @@ import 'codemirror/mode/python/python.js'
 import 'codemirror/mode/perl/perl.js'
 import 'codemirror/mode/clike/clike.js'
 
-const InteractBoard = forwardRef(({editValue, language, onChange: onChange, onCursorActivity}, ref) => {
+const InteractBoard = forwardRef(({editValue, language, onChange, onChanges, onCursorActivity}, ref) => {
   const codeMirrorRef = useRef()
+
+  useEffect(() => {
+    codeMirrorRef?.current?.editor.doc.cm.on("changes", onChanges)
+  }, [])
 
   useImperativeHandle(ref, () => ({
     getEditor: () => {
       return codeMirrorRef?.current?.editor
+    },
+    getCM: () => {
+      return codeMirrorRef?.current?.editor.doc.cm
+    },
+    getValue: () => {
+      return codeMirrorRef?.current?.editor.doc.getValue()
     },
     replaceRange: (code, from, to = null) => {
       codeMirrorRef?.current?.editor.doc.replaceRange(code, from, to)
@@ -96,7 +106,17 @@ const InteractBoard = forwardRef(({editValue, language, onChange: onChange, onCu
         options={{
           lineNumbers: true,
           mode: {name: language},
-          extraKeys: {"Alt": "autocomplete"},
+          extraKeys: {
+            "Alt": "autocomplete",
+            // Tab: (cm) => {
+            //   if (cm.somethingSelected()) {
+            //     cm.indentSelection('add');
+            //   } else {
+            //     // cm.indentLine(cm.getCursor().line, "add");  // 整行缩进 不符合预期
+            //     cm.replaceSelection(Array(cm.getOption("indentUnit") + 1).join(" "));
+            //   }
+            // },
+          },
           autofocus: true,
           styleActiveLine: true,
           lineWrapping: true,
@@ -105,7 +125,9 @@ const InteractBoard = forwardRef(({editValue, language, onChange: onChange, onCu
           scrollbarStyle: "native",
           fixedGutter: true,
           coverGutterNextToScrollbar: false,
-          autoCloseBrackets: true
+          autoCloseBrackets: true,
+          dragDrop: false,
+          indentUnit: 4
         }}
         onChange={onChange}
         spellcheck
@@ -131,6 +153,13 @@ const InteractBoard = forwardRef(({editValue, language, onChange: onChange, onCu
 
 export const placeholder = [
   // java
+  "/**\n" +
+  " * [Java代码运行说明]\n" +
+  " *\n" +
+  " * 规定启动类名称: Main\n" +
+  " * 允许文件读写: 否\n" +
+  " * 允许系统调用: 否\n" +
+  " */\n" +
   "class Main {\n" +
   "    public static void main(String[] args) {\n" +
   "        System.out.println(\"Hello World!\");\n" +
