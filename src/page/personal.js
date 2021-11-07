@@ -22,7 +22,7 @@ const Personal = () => {
   return Model.session.isLogin() && (
     <>
       <Header width={1000} title="Interaction Fields" subtitle={["个人中心", page === "settings" ? "账号设置" : "会议记录"]} />
-      <Page width="1000px" padding={0}>
+      <Page width="1000px" paddingTop="100px">
         <Page.Content>
           <Fieldset.Group value={page} onChange={param => history.push(`/personal/${param}`)}>
             <UserSettings />

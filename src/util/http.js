@@ -5,7 +5,6 @@ export const HTTP = axios.create()
 
 HTTP.interceptors.request.use(
   (config) => {
-    console.log(config)
     config.headers = {
       'content-type': 'application/x-www-form-urlencoded;charset=utf-8',
       'Authorization': sessionStorage.getItem('sessionInfo') && "Bearer " + JSON.parse(sessionStorage.getItem('sessionInfo'))?.jwt?.access_token
@@ -21,10 +20,11 @@ HTTP.interceptors.request.use(
 
 HTTP.interceptors.response.use(
   (data) => {
-    console.info(data)
+    console.info(data.config.method, data.config.url, data.data)
     if (data.data.code === 200) {
       return Promise.resolve(data.data)
     } else {
+      console.error(data.data)
       return Promise.reject(data.data)
     }
   },

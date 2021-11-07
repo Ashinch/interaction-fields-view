@@ -1,5 +1,5 @@
 import TextOperation from "./text-operation"
-import { rtcEvent, send } from "../model/interact"
+import { rtcEvent, interactSend } from "../model/interact"
 
 class AwaitingConfirm {
   // In the 'AwaitingConfirm' state, there's one operation the client has sent
@@ -293,7 +293,7 @@ export default class Client {
 
   // Override this method.
   sendOperation(revision, operation) {
-    send(rtcEvent.operation, {op: operation.ops, version: revision})
+    interactSend(rtcEvent.operation, {op: operation.ops, version: revision})
   };
 
   // Override this method.

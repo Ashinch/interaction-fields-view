@@ -25,7 +25,7 @@ import {
   onSelfCameraChange,
   onSelfMicChange,
   rtcEvent,
-  send
+  interactSend
 } from "../model/interact"
 import CompileRecord from "../component/compileRecord"
 import InteractBoard, { editorLang, placeholder } from "../component/interactBoard"
@@ -40,16 +40,20 @@ import { getAvatarStyle, getRandomColor } from "../util/hash"
 
 let client
 let remindInterval
+let connectInterval
+let createAtInterval
 let userJoinPage
 
 const Fields = () => {
   const history = useHistory()
   const {code} = useParams()
-  const [loading, setLoading] = useState(true)
-  const [editValue, setEditValue] = useState("")
-  const [meetingStatus, setMeetingStatus] = useState()
+  const [loading, setLoading] = useState(false)
+  const [meetingStatus, setMeetingStatus] = useState({
+    title: "",
+  })
   const [duration, setDuration] = useState()
-  const [isConnected, setConnected] = useState(true)
+  const [isConnected, setConnected] = useState()
+  const [heartbeatDelay, setHeartbeatDelay] = useState()
   const [userJoin, setUserJoin] = useState(null)
   const [remind, setRemind] = useState("设定提醒")
   const [bitrate, setBitrate] = useState()
@@ -57,73 +61,34 @@ const Fields = () => {
   const [typeID, setTypeID] = useState(1)
   const [language, setLanguage] = useState(editorLang[typeID])
   const [isRun, setIsRun] = useState(false)
-  const [canRun, setCanRun] = useState(!editValue)
+  const [canRun, setCanRun] = useState(true)
   const [showEnv, setShowEnv] = useState(false)
+  const [showReconnect, setShowReconnect] = useState(false)
   const [showRemindLoading, setRemindLoading] = useState(false)
   const [noteValue, setNoteValue] = useState("# 会议笔记\n\n> 这里输入的文本仅自己可见（支持Markdown语法高亮）\n\n")
   const [toasts, setToast] = useToasts()
 
   const otherCameraRef = useRef()
   const selfCameraRef = useRef()
-  const interactionBoard = useRef()
-  const codeDivRef = useRef()
+  const interactBoard = useRef()
+  const headerRef = useRef()
 
   useEffect(() => {
-    setLoading(true)
-    Model.meeting.statusByCode({
-      code: code
-    }).then((res) => {
-      res.data.attachmentType.map((item) => item.name = item.name.split("/")[1])
-      setMeetingStatus(res.data)
-      setLoading(false)
+    if (!Model.session.isLogin()) {
+      headerRef?.current?.showLogin()
+    } else {
+      connect((res) => {
+        window.addEventListener('visibilitychange', () => {
+          if (document.hidden && !Model.session.isMe(res.data.creatorUUID)) {
+            interactSend(rtcEvent.hidden, null)
+          }
+        })
 
-      connect({
-        url: `wss://${res.data.ip}:${res.data.port}/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`,
-        isCreator: Model.session.isMe(res.data.creatorUUID),
-        cameraDeviceID: "cameraDeviceID"
-      })
-
-      setInterval(() => {
-        if (res.data == null) return
-        const createAt = new Date(res.data?.createAt).getTime()
-        const now = new Date().getTime()
-        const diff = now - createAt
-
-        /* 计算剩余小时数 */
-        let hours = parseInt(diff / 1000 / (60 * 60), 10)
-        /* 计算剩余分钟数 */
-        let minutes = parseInt(diff / 1000 / 60 % 60, 10)
-        /* 计算剩余秒数 */
-        let seconds = parseInt(diff / 1000 % 60, 10)
-
-        /* 如果小于10，则在数字前面添加0 */
-        if (hours < 10) {
-          hours = '0' + hours
-        }
-        if (minutes < 10) {
-          minutes = '0' + minutes
-        }
-        if (seconds < 10) {
-          seconds = '0' + seconds
-        }
-
-        setDuration(hours + "小时 " + minutes + "分 " + seconds + "秒")
-      }, 1000)
-
-
-      window.addEventListener('visibilitychange', () => {
-        if (document.hidden && !Model.session.isMe(res.data.creatorUUID)) {
-          send(rtcEvent.hidden, null)
+        window.onbeforeunload = (e) => {
+          e.returnValue = "确定离开当前页面吗？"
         }
       })
-
-      window.onbeforeunload = (e) => {
-        e.returnValue = "确定离开当前页面吗？"
-      }
-    }).catch((err) => {
-      setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
-      history.push("/")
-    })
+    }
 
     return () => {
       window.removeEventListener('visibilitychange', () => {
@@ -171,13 +136,14 @@ const Fields = () => {
   }
 
 
-  const connect = ({url, isCreator, cameraDeviceID}) =>
+  const init = ({url, isCreator, cameraDeviceID}) =>
     interactInit({
       url: url,
       isCreator: isCreator,
       cameraDeviceID: cameraDeviceID,
       onConnected: onConnected,
       onDisconnected: onDisconnected,
+      onHeartbeatDelay: onHeartbeatDelay,
       onAddSelfStream: onAddSelfStream,
       onAddOtherStream: onAddOtherStream,
       onOtherMicChange: onOtherMicChange,
@@ -195,7 +161,6 @@ const Fields = () => {
     })
 
   const onSelfEditChange = (editor, changes) => {
-    console.log("onSelfEditChange", editor, changes)
     setCanRun(editor.doc.getValue()?.length <= 0)
     if (changes[0].origin === undefined) {
       return
@@ -271,19 +236,22 @@ const Fields = () => {
 
       docEndLength += sumLengths(change.removed) - sumLengths(change.text)
     }
-    console.log(`operation: ${JSON.stringify(operation)}, inverse: ${JSON.stringify(inverse)}`)
     client.applyClient(operation)
   }
 
   const onConnected = (json) => {
-    // if (!(json.data.ops instanceof Array)) return
+    clearInterval(connectInterval)
+    setConnected(true)
+    setLanguage(editorLang[json.data.languageId])
+    setTypeID(json.data.languageId)
+    setShowReconnect(false)
     client = new Client(json.data.version)
-    client.setCM(interactionBoard?.current?.getCM())
+    client.setCM(interactBoard?.current?.getCM())
     if (Bee.StringUtils.isNotBlank(json.data.content)) {
-      interactionBoard?.current?.replaceRange(json.data.content, {line: 0, ch: 0})
+      interactBoard?.current?.setValue(json.data.content)
     } else {
-      setEditValue(placeholder[0])
-      client.applyClient(new TextOperation().insert(placeholder[0]))
+      interactBoard?.current?.setValue(placeholder[0])
+      client.applyClient(TextOperation.fromJSON([placeholder[0]]))
     }
     onRemind({data: json.data.remind})
     json.data.note && setNoteValue(json.data.note)
@@ -291,6 +259,63 @@ const Fields = () => {
 
   const onDisconnected = (event) => {
     setConnected(false)
+    connect()
+  }
+
+  const connect = (callback) => {
+    const connectHandler = () => {
+      setShowReconnect(true)
+      Model.meeting.statusByCode({
+        code: code
+      }).then((res) => {
+        res.data.attachmentType.map((item) => item.name = item.name.split("/")[1])
+        setMeetingStatus(res.data)
+        interactClose()
+        init({
+          url: `wss://${res.data.ip}:${res.data.port}/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`,
+          isCreator: Model.session.isMe(res.data.creatorUUID),
+          cameraDeviceID: "cameraDeviceID"
+        })
+        clearInterval(connectInterval)
+        const creatAtHandler = () => {
+          if (res.data == null) return
+          const createAt = new Date(res.data?.createAt).getTime()
+          const now = new Date().getTime()
+          const diff = now - createAt
+
+          /* 计算剩余小时数 */
+          let hours = parseInt(diff / 1000 / (60 * 60), 10)
+          /* 计算剩余分钟数 */
+          let minutes = parseInt(diff / 1000 / 60 % 60, 10)
+          /* 计算剩余秒数 */
+          let seconds = parseInt(diff / 1000 % 60, 10)
+
+          /* 如果小于10，则在数字前面添加0 */
+          if (hours < 10) {
+            hours = '0' + hours
+          }
+          if (minutes < 10) {
+            minutes = '0' + minutes
+          }
+          if (seconds < 10) {
+            seconds = '0' + seconds
+          }
+
+          setDuration(hours + "小时 " + minutes + "分 " + seconds + "秒")
+        }
+        clearInterval(createAtInterval)
+        creatAtHandler()
+        createAtInterval = setInterval(creatAtHandler, 1000)
+        callback && callback(res)
+      })
+    }
+    clearInterval(connectInterval)
+    // connectHandler()
+    connectInterval = setInterval(connectHandler, 1000)
+  }
+
+  const onHeartbeatDelay = (json) => {
+    setHeartbeatDelay(json.data)
   }
 
   const onACK = (json) => {
@@ -298,7 +323,6 @@ const Fields = () => {
   }
 
   const onJoin = (json) => {
-    console.log("onJoin", json.data)
     setUserJoin(json.data)
     userJoinPage = json.data
     setToast({
@@ -308,7 +332,7 @@ const Fields = () => {
   }
 
   const onQuit = (json) => {
-    interactionBoard?.current?.clearOtherCursor()
+    interactBoard?.current?.clearOtherCursor()
     setUserJoin(null)
     userJoinPage = null
     setToast({
@@ -367,24 +391,20 @@ const Fields = () => {
   }
 
   const onSelfCursorChange = (editor) => {
-    send(rtcEvent.cursorChange, editor.getCursor())
+    interactSend(rtcEvent.cursorChange, editor.getCursor())
   }
 
   const onOtherCursorChange = (json) => {
     let user = userJoin || userJoinPage
     if (user == null) return
     const color = getRandomColor(user.uuid.split("-")[4])
-    interactionBoard?.current?.setOtherCursor(json.data, color, user.name.charAt(0))
+    interactBoard?.current?.setOtherCursor(json.data, color, user.name.charAt(0))
   }
 
   const onSelfLanguageChange = (e, isSend = true) => {
-    if (language === editorLang[e]) return
-    console.log(e)
     setLanguage(editorLang[e])
     setTypeID(e)
-    isSend && client.applyClient(new TextOperation().delete(editValue.length).insert(placeholder[e - 1]))
-    isSend && send(rtcEvent.languageChange, e)
-    setEditValue(placeholder[e - 1])
+    isSend && interactSend(rtcEvent.languageChange, parseInt(e))
   }
 
   const onOtherLanguageChange = (json) => {
@@ -400,9 +420,8 @@ const Fields = () => {
   }
 
   const onCameraSwitch = (e) => {
-    console.log(e)
     interactClose()
-    connect({
+    init({
       url: `wss://${meetingStatus.ip}:${meetingStatus.port}/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`,
       isCreator: Model.session.isMe(meetingStatus.creatorUUID),
       cameraDeviceID: e
@@ -410,8 +429,8 @@ const Fields = () => {
   }
 
   const onRunClick = () => {
-    let code = interactionBoard?.current?.getValue()
-    const selectedValue = interactionBoard?.current?.getSelection()
+    let code = interactBoard?.current?.getValue()
+    const selectedValue = interactBoard?.current?.getSelection()
     if (Bee.StringUtils.isNotBlank(selectedValue)) {
       code = selectedValue
     }
@@ -419,7 +438,6 @@ const Fields = () => {
     Model.judge.commit({
       meetingUUID: meetingStatus.uuid, typeID: typeID, code: code
     }).then((res) => {
-      console.log(res)
     }).catch((err) => {
       setIsRun(false)
       console.log(err)
@@ -428,7 +446,6 @@ const Fields = () => {
 
   const onJudgeResultReceive = (json) => {
     setIsRun(false)
-    console.log("onJudgeResultReceive", json)
     let result = json.data?.statusCode === 1
     setToast({
       text: result
@@ -446,26 +463,38 @@ const Fields = () => {
 
   const onRemindClick = (e) => {
     setRemindLoading(true)
-    send(rtcEvent.remind, e)
+    interactSend(rtcEvent.remind, e)
   }
 
   const onNoteChange = (editor, data, value) => {
-    send(rtcEvent.note, value)
+    interactSend(rtcEvent.note, value)
   }
 
   return loading ? <Page><Spinner style={{position: "absolute", top: "50%", left: "50%"}} /></Page> : (
     <>
-      <Header width={1500} title="Interaction Fields" subtitle={["会议室", code]} />
-      <Page padding={0}>
-        <Page.Content>
+      <Header ref={headerRef} width={1500} title="Interaction Fields" subtitle={["会议室", code]} />
+      <Page paddingTop="100px">
+        <Page.Content style={{paddingBottom: 0}}>
           <Grid.Container className="interaction-board" style={{width: "100%", height: "100%"}}
                           alignItems={"center"} justify={"center"} direction={"row"}>
-            <Grid.Container className="editor" height="720px">
-              <Grid.Container alignItems={"center"} direction={"row"} justify={"space-between"}>
+            <Grid.Container className="editor" height="716px">
+              <Grid.Container alignItems={"center"} direction={"row"} justify={"space-between"} style={{padding: 24}}>
                 <Text h3 style={{fontSize: 32, margin: 0}}>{meetingStatus.title}</Text>
                 <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
                   <Link style={{fontSize: 14, fontWeight: "bold"}} href={null} block
                         onClick={() => setShowEnv(true)}>环境说明</Link>
+                  <Link style={{fontSize: 14, fontWeight: "bold"}} href={null} block
+                        onClick={() => {
+                          let length = interactBoard?.current?.getValue()?.length
+                          let del = 0 - length
+                          let insert = placeholder[typeID - 1]
+                          interactBoard?.current?.setValue(insert)
+                          if (length === 0) {
+                            client.applyClient(TextOperation.fromJSON([insert]))
+                          } else {
+                            client.applyClient(TextOperation.fromJSON([del, insert]))
+                          }
+                        }}>初始化</Link>
                   <Spacer w={1} />
                   <Select height="40px"
                           disableMatchWidth
@@ -480,33 +509,36 @@ const Fields = () => {
                           loading={isRun} disabled={canRun}>运行</Button>
                 </div>
               </Grid.Container>
-              <Spacer h={1} />
+
               <Grid>
                 <Tabs initialValue="1">
                   <Tabs.Item label={<><Codepen />交互板</>} value="1" height="50px">
-                    <Spacer h={1} />
-                    <div id="ss" ref={codeDivRef} style={{display: "flex", flex: "1", height: "auto"}}>
-                      <InteractBoard ref={interactionBoard} editValue={editValue} language={language}
+                    <div style={{display: "flex", flex: "1", height: "auto", padding: 24}}>
+                      <InteractBoard ref={interactBoard} language={language}
                                      onChanges={onSelfEditChange}
                                      onChange={null} onCursorActivity={onSelfCursorChange} />
                     </div>
                   </Tabs.Item>
                   <Tabs.Item label={<><FileText />笔记</>} value="2" height="50px">
-                    <Spacer h={1} />
-                    <InteractBoard ref={interactionBoard} editValue={noteValue} language={"markdown"}
-                                   onChange={onNoteChange} onCursorActivity={() => {
-                    }} />
+                    <div style={{display: "flex", flex: "1", height: "auto", padding: 24}}>
+                      <InteractBoard ref={interactBoard} language={"markdown"}
+                                     onChange={onNoteChange} onCursorActivity={() => {
+                      }} />
+                    </div>
                   </Tabs.Item>
                   <Tabs.Item label={<><Clock />运行记录</>} value="3" height="50px">
-                    <Spacer h={1} />
-                    <CompileRecord meetingUUID={meetingStatus.uuid} />
+                    <div style={{display: "flex", flexDirection: "column", flex: "1", height: "auto", padding: 24}}>
+                      <CompileRecord meetingUUID={meetingStatus.uuid} />
+                    </div>
                   </Tabs.Item>
                 </Tabs>
               </Grid>
             </Grid.Container>
+
             <Spacer w={2} />
-            <Grid className="extra" height="720px">
-              <Grid.Container justify="space-between" alignItems="center">
+
+            <Grid className="extra" height="716px">
+              <Grid.Container justify="space-between" alignItems="center" style={{padding: 24}}>
                 <div style={{display: "flex", alignItems: "center"}}>
                   <Clock />
                   <Spacer w={1} />
@@ -541,8 +573,8 @@ const Fields = () => {
                   <Button auto type="error" ghost iconRight={<Power />} onClick={onRunClick}>结束会议</Button>
                 </div>
               </Grid.Container>
-              <Divider style={{margin: "24px 0"}} />
-              <div className="camera" style={{borderRadius: 50}}>
+              <Divider style={{margin: 0}} />
+              <div className="camera">
                 {Model.session.isMe(meetingStatus?.creatorUUID) ? (<>
                   <CameraView ref={selfCameraRef}
                               connected={isConnected}
@@ -564,12 +596,12 @@ const Fields = () => {
                               onCameraSwitch={onCameraSwitch} />
                 </>)}
               </div>
-              <Divider style={{margin: "24px 0"}} />
-              <Grid.Container justify={"space-between"}>
+              <Divider style={{margin: 0}} />
+              <Grid.Container justify={"space-between"} style={{padding: 24}}>
                 <div style={{display: "flex", alignItems: "center", width: 124}}>
                   <Activity color="#0cce6b" />
                   <Spacer w={1} />
-                  <Description title="HEARTBEAT-1" content={"未知"} />
+                  <Description title="HEARTBEAT-1" content={heartbeatDelay >= 0 ? heartbeatDelay + " ms" : "未知"} />
                 </div>
 
                 <Tooltip text={'缓存是达到高性能的重要组成部分'} enterDelay={500} placement="bottom" type="dark">
@@ -606,11 +638,17 @@ const Fields = () => {
           <Modal.Subtitle>编译器版本</Modal.Subtitle>
           <Modal.Content>
             <Table data={[
-              {language: "C", compiler: "gcc", args: <code>-O2 -w -std=c99 -lm</code>, version: "10.3.1 2021042"},
-              {language: "C++", compiler: "g++", args: <code>-O2 -w -std=c++11 -lm</code>, version: "10.3.1 2021042"},
               {language: "Java", compiler: "javac", args: <code>-Dfile.encoding=UTF-8</code>, version: "1.8.0_282"},
               {language: "Python 2", compiler: "python", args: null, version: "2.7.18"},
               {language: "Python 3", compiler: "python3", args: null, version: "3.9.5"},
+              {
+                language: "C", compiler: "gcc", args: <code>-O2 -w -std=c99 -lm</code>, version: "Alpine 10.3.1" +
+                  " 2021042"
+              },
+              {
+                language: "C++", compiler: "g++", args: <code>-O2 -w -std=c++11 -lm</code>, version: "Alpine 10.3.1" +
+                  " 2021042"
+              },
             ]}>
               <Table.Column prop="language" label="语言" />
               <Table.Column prop="compiler" label="编译器" />
@@ -636,6 +674,19 @@ const Fields = () => {
           </Modal.Content>
         </Modal>
 
+        <Modal visible={showReconnect} keyboard={false} disableBackdropClick={true}
+               onClose={() => setShowReconnect(false)}>
+          <Modal.Content style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center"
+          }}>
+            <Text h3 b>正在连接服务器</Text>
+          </Modal.Content>
+          <Modal.Action loading />
+        </Modal>
+
         <style jsx="true">{`
           .interaction-board {
           }
@@ -645,16 +696,29 @@ const Fields = () => {
             display: flex;
             flex-direction: column;
             background: white;
-            padding: 24px;
             box-shadow: rgba(0, 0, 0, 0.12) 0 30px 60px;
             border-radius: 5px;
+          }
+
+          .scroll-container {
+            width: 100%;
+            height: 100%;
+            flex: 1;
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            border-bottom: 1px solid #eaeaea;
+            padding: 0 24px !important;
+          }
+
+          .tabs .content {
+            padding: 0 !important;
           }
 
           .extra {
             display: flex;
             flex-direction: column;
             background: white;
-            padding: 24px;
             box-shadow: rgba(0, 0, 0, 0.12) 0 30px 60px;
             border-radius: 5px;
             width: 650px;
@@ -663,6 +727,7 @@ const Fields = () => {
           .camera {
             display: flex;
             flex-direction: row;
+            padding: 24px;
           }
 
           .stats-item {

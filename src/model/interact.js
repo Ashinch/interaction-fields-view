@@ -2,6 +2,7 @@ let ws
 let pc
 let rtcStream
 let statsInterval
+let heartbeatInterval
 let isConnected = true
 
 // stun和turn服务器
@@ -32,6 +33,7 @@ export const rtcEvent = {
   remind: "remind",
   hidden: "hidden",
   note: "note",
+  heartbeat: "heartbeat",
 }
 
 export const interactInit = ({
@@ -40,6 +42,7 @@ export const interactInit = ({
                                cameraDeviceID,
                                onConnected,
                                onDisconnected,
+                               onHeartbeatDelay,
                                onAddSelfStream,
                                onAddOtherStream,
                                onOtherMicChange,
@@ -57,9 +60,6 @@ export const interactInit = ({
                              }) => {
   ws = new WebSocket(url)
   //MozWebSocket
-
-
-  // socket.onopen = () => onOpen && onOpen()
 
   //处理到来的信令
   ws.onmessage = (event) => {
@@ -87,6 +87,9 @@ export const interactInit = ({
       case rtcEvent.hidden:
         onHidden && onHidden(json)
         break
+      case rtcEvent.heartbeat:
+        onHeartbeatDelay && onHeartbeatDelay(json)
+        break
       case rtcEvent.ack:
         onACK && onACK(json)
         break
@@ -110,23 +113,34 @@ export const interactInit = ({
         // if (json.event === rtcEvent.offer) {
         pc && pc.createAnswer((desc) => {
           pc.setLocalDescription(desc)
-          isWSReady() && send(rtcEvent.answer, {"sdp": desc})
+          isWSReady() && interactSend(rtcEvent.answer, {"sdp": desc})
         }, (e) => console.error(`createAnswer: ${e}`))
       // }
     }
   }
 
   ws.onerror = (event) => {
-    console.log("onerror", event)
+  }
+
+  ws.onclose = (event) => {
     isConnected = false
+    clearInterval(heartbeatInterval)
     onDisconnected && onDisconnected(event)
   }
+
+  ws.onopen = (event) => {
+
+  }
+
+  heartbeatInterval = setInterval(() => {
+    interactSend(rtcEvent.heartbeat, new Date().getTime())
+  }, 3000)
 
   pc = new RTCPeerConnection(iceServer)
 
   pc.onicecandidate = (event) => {
     if (event.candidate !== null) {
-      isWSReady() && send(rtcEvent.iceCandidate, {"candidate": event.candidate})
+      isWSReady() && interactSend(rtcEvent.iceCandidate, {"candidate": event.candidate})
     }
   }
 
@@ -198,7 +212,7 @@ export const interactInit = ({
       pc.createOffer((desc) => {
         // 发送offer和answer的函数，发送本地session描述
         pc.setLocalDescription(desc)
-        isWSReady() && send(rtcEvent.offer, {"sdp": desc})
+        isWSReady() && interactSend(rtcEvent.offer, {"sdp": desc})
       }, (e) => console.error("PC createOffer is error: ", e))
       // }
     }, (error) => {
@@ -207,7 +221,7 @@ export const interactInit = ({
     })
 }
 
-export const send = (event, data) => {
+export const interactSend = (event, data) => {
   isWSReady() && ws.send(JSON.stringify({
     "event": event,
     "data": data
@@ -217,12 +231,12 @@ export const send = (event, data) => {
 
 export const onSelfMicChange = (enabled) => {
   rtcStream && rtcStream.getAudioTracks().forEach(i => i.enabled = enabled)
-  send(rtcEvent.micChange, !enabled)
+  interactSend(rtcEvent.micChange, !enabled)
 }
 
 export const onSelfCameraChange = (enabled) => {
   rtcStream && rtcStream.getVideoTracks().forEach(i => i.enabled = enabled)
-  send(rtcEvent.cameraChange, !enabled)
+  interactSend(rtcEvent.cameraChange, !enabled)
 }
 
 export const isWSReady = () => {

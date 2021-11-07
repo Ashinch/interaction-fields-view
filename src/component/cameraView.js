@@ -6,6 +6,7 @@ import { getDevices } from "../model/interact"
 import { Model } from "../model/model"
 import User from "@geist-ui/react-icons/user"
 import { getAvatarStyle } from "../util/hash"
+import UserX from "@geist-ui/react-icons/userX"
 
 const CameraView = forwardRef(({
                                  connected,
@@ -103,7 +104,7 @@ const CameraView = forwardRef(({
             justifyContent: "center",
             alignItems: "center"
           }}>
-            <User size={150} color="#ccc" />
+            <UserX size={150} color="#ccc" />
           </div>
         }
         <Spacer h={1.5} />

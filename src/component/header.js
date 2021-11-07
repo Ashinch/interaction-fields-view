@@ -1,19 +1,28 @@
 import { Divider as DividerIcon } from "@geist-ui/react-icons"
-import { Avatar, Button, Divider, Link, Modal, Popover, Spacer, useModal, useToasts } from "@geist-ui/react"
+import { Avatar, Button, Divider, Link, Modal, Popover, Spacer, useToasts } from "@geist-ui/react"
 import { Model } from "../model/model"
 import Login from "./login"
-import { useState } from "react"
+import { forwardRef, useImperativeHandle, useState } from "react"
 import { getAvatarStyle, getRandomColor } from "../util/hash"
 import { useHistory } from "react-router-dom"
 
-export const Header = ({width, title, subtitle, shadow}) => {
+export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
   const history = useHistory()
   const [username, setUsername] = useState("a")
   const [password, setPassword] = useState("123")
   const [isSMS, setIsSMS] = useState()
   const [isLoginLoading, setIsLoginLoading] = useState()
-  const {visible, setVisible, bindings} = useModal()
+  const [visible, setVisible] = useState(false)
+  const [disableBackdropClick, setDisableBackdropClick] = useState(false)
   const [toasts, setToast] = useToasts()
+
+  useImperativeHandle(ref, () => ({
+    showLogin: () => {
+      setVisible(true)
+      setDisableBackdropClick(true)
+    }
+  }))
+
   const login = () => {
     setIsLoginLoading(true)
     Model.session.login({
@@ -59,10 +68,15 @@ export const Header = ({width, title, subtitle, shadow}) => {
 
   return (
     <div style={{
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
       width: "100%", height: 80, display: "flex",
       justifyContent: "center",
       borderBottom: shadow ? "unset" : "1px solid #eaeaea",
-      boxShadow: shadow ? "0 0 15px 0 rgb(0 0 0 / 10%)" : "unset"
+      boxShadow: shadow ? "0 0 15px 0 rgb(0 0 0 / 10%)" : "unset",
+      zIndex: 100
     }}>
       <div style={{
         width: width, height: "100%", display: "flex",
@@ -89,9 +103,12 @@ export const Header = ({width, title, subtitle, shadow}) => {
           )}
         </div>
         <div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
-          <Button auto type="abort" onClick={() => window.open("https://github.com/Ashinch/interaction-fields")}>GitHub</Button>
-          <Button auto type="abort" onClick={() => {}}>Credit</Button>
-          <Button auto type="abort" onClick={() => {}}>About</Button>
+          <Button auto type="abort"
+                  onClick={() => window.open("https://github.com/Ashinch/interaction-fields")}>GitHub</Button>
+          <Button auto type="abort" onClick={() => {
+          }}>Credit</Button>
+          <Button auto type="abort" onClick={() => {
+          }}>About</Button>
           {Model.session.isLogin() ? (
             <>
               <Spacer w={1} />
@@ -103,13 +120,17 @@ export const Header = ({width, title, subtitle, shadow}) => {
             <>
               <Button auto type="abort">注册</Button>
               <Spacer w={1} />
-              <Button auto type="secondary" onClick={() => setVisible(true)}>登录</Button>
+              <Button auto type="secondary" onClick={() => {
+                setVisible(true)
+                setDisableBackdropClick(false)
+              }}>登录</Button>
             </>
           )}
         </div>
       </div>
 
-      <Modal {...bindings}>
+      <Modal visible={visible} keyboard={false} disableBackdropClick={disableBackdropClick}
+             onClose={() => setVisible(false)}>
         <Modal.Title>登录</Modal.Title>
         <Modal.Subtitle>{isSMS ? "输入短信验证码登录" : "输入账号密码登录"}</Modal.Subtitle>
         <Modal.Content>
@@ -126,4 +147,4 @@ export const Header = ({width, title, subtitle, shadow}) => {
       `}</style>
     </div>
   )
-}
+})

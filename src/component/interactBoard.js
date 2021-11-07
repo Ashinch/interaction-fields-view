@@ -24,7 +24,7 @@ import 'codemirror/mode/python/python.js'
 import 'codemirror/mode/perl/perl.js'
 import 'codemirror/mode/clike/clike.js'
 
-const InteractBoard = forwardRef(({editValue, language, onChange, onChanges, onCursorActivity}, ref) => {
+const InteractBoard = forwardRef(({language, onChange, onChanges, onCursorActivity}, ref) => {
   const codeMirrorRef = useRef()
 
   useEffect(() => {
@@ -39,10 +39,18 @@ const InteractBoard = forwardRef(({editValue, language, onChange, onChanges, onC
       return codeMirrorRef?.current?.editor.doc.cm
     },
     getValue: () => {
-      return codeMirrorRef?.current?.editor.doc.getValue()
+      return codeMirrorRef?.current?.editor.doc.cm.getValue()
     },
-    replaceRange: (code, from, to = null) => {
-      codeMirrorRef?.current?.editor.doc.replaceRange(code, from, to)
+    setValue: (value) => {
+      let length = codeMirrorRef?.current?.editor.doc.cm.getValue().length
+      let pos = codeMirrorRef?.current?.editor.doc.cm.posFromIndex(length)
+      codeMirrorRef?.current?.editor.doc.cm.replaceRange(value, {line: 0, ch: 0}, pos)
+    },
+    replaceRange: (value, from, to = null) => {
+      codeMirrorRef?.current?.editor.doc.cm.replaceRange(value, from, to)
+    },
+    foldCode: (pos) => {
+      codeMirrorRef?.current?.editor.doc.cm.foldCode(pos, null, "fold")
     },
     getSelection: () => {
       return codeMirrorRef?.current?.editor.getSelection()
@@ -102,7 +110,6 @@ const InteractBoard = forwardRef(({editValue, language, onChange, onChanges, onC
     <>
       <CodeMirror
         ref={codeMirrorRef}
-        value={editValue}
         options={{
           lineNumbers: true,
           mode: {name: language},
@@ -133,7 +140,7 @@ const InteractBoard = forwardRef(({editValue, language, onChange, onChanges, onC
         spellcheck
         onCursorActivity={onCursorActivity}
         editorDidMount={(editor) => {
-          editor.setSize(770, 530)
+          editor.setSize(770, 515)
         }}
       />
 
@@ -153,12 +160,19 @@ const InteractBoard = forwardRef(({editValue, language, onChange, onChanges, onC
 
 export const placeholder = [
   // java
+  "import java.io.*;\n" +
+  "import java.util.*;\n" +
+  "import java.math.*;\n" +
+  "import java.util.regex.*;\n" +
+  "import java.util.stream.*;\n" +
+  "import java.text.*;\n" +
+  "import java.security.SecureRandom;\n" +
+  "import java.util.function.*;\n" +
+  "import java.util.concurrent.*;\n" +
+  "\n" +
   "/**\n" +
-  " * [Java代码运行说明]\n" +
-  " *\n" +
-  " * 规定启动类名称: Main\n" +
-  " * 允许文件读写: 否\n" +
-  " * 允许系统调用: 否\n" +
+  " * Java 环境版本: 1.8.0_282\n" +
+  " * 可用包已导入，规定启动类名称: Main\n" +
   " */\n" +
   "class Main {\n" +
   "    public static void main(String[] args) {\n" +
@@ -167,17 +181,32 @@ export const placeholder = [
   "}\n",
 
   // python2
+  "\n" +
+  "\"\"\"\n" +
+  "Python2 环境版本: 2.7.18\n" +
+  "禁用文件读写，禁用系统调用\n" +
+  "\"\"\"\n" +
   "print 'Hello World'\n",
 
   // python3
+  "\n" +
+  "\"\"\"\n" +
+  "Python3 环境版本: 3.9.5\n" +
+  "禁用文件读写，禁用系统调用\n" +
+  "\"\"\"\n" +
   "print('Hello World')\n",
 
   // javascript
+  "\n" +
   "console.log('Hello World')\n",
 
   // c
   "#include <stdio.h>\n" +
   "\n" +
+  "/**\n" +
+  " * C语言 环境版本: Alpine 10.3.1 2021042\n" +
+  " * 禁用文件读写，禁用系统调用\n" +
+  " */\n" +
   "int main()\n" +
   "{\n" +
   "    printf(\"Hello, World!\\n\");\n" +
@@ -188,6 +217,10 @@ export const placeholder = [
   "#include <iostream>\n" +
   "using namespace std;\n" +
   "\n" +
+  "/**\n" +
+  " * C++ 环境版本: Alpine 10.3.1 2021042\n" +
+  " * 禁用文件读写，禁用系统调用\n" +
+  " */\n" +
   "int main()\n" +
   "{\n" +
   "    cout << \"Hello, World!\" << endl;\n" +

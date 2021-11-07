@@ -81,7 +81,12 @@ const CompileRecord = ({meetingUUID}) => {
   }
 
   return loading ? <Spinner style={{position: "relative", top: 100, left: "50%"}} /> : (
-    <>
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      height: 520,
+    }}>
       <Table data={records}>
         <Table.Column prop="uuidTrim" label="编号" />
         <Table.Column prop="createAt" label="提交时间" />
@@ -93,20 +98,21 @@ const CompileRecord = ({meetingUUID}) => {
         <Table.Column prop="commit" label="提交代码" />
         <Table.Column prop="output" label="输出信息" />
       </Table>
-      <Spacer h={1} />
+
       <div className="pageControl">
         <Pagination count={total} onChange={onPaginationChange}>
           <Pagination.Next><ChevronRight /></Pagination.Next>
           <Pagination.Previous><ChevronLeft /></Pagination.Previous>
         </Pagination>
       </div>
+
       <Modal visible={showModal} onClose={onCloseModal}>
         <Modal.Title>{modalTitle}</Modal.Title>
         <Modal.Content>
           <Textarea initialValue={modalContent} readOnly width="100%" height="200px" />
         </Modal.Content>
       </Modal>
-      <Spacer h={1.5} />
+
       <style jsx="true">{`
         .pageControl {
           display: flex;
@@ -114,7 +120,7 @@ const CompileRecord = ({meetingUUID}) => {
           justify-content: center;
         }
       `}</style>
-    </>
+    </div>
   )
 }
 
