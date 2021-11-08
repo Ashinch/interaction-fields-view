@@ -1,17 +1,23 @@
 import {
-  Button, ButtonDropdown,
+  Button,
   Description,
   Divider,
-  Grid, Link, Loading, Modal,
-  Page, Popover,
+  Grid,
+  Link,
+  Loading,
+  Modal,
+  Page,
+  Popover,
   Select,
   Spacer,
-  Spinner, Table,
+  Spinner,
+  Table,
   Tabs,
-  Text, Textarea, Tooltip,
+  Text,
+  Tooltip,
   useToasts
 } from '@geist-ui/react'
-import { Clock, Codepen, FileText, PlayFill, X } from "@geist-ui/react-icons"
+import { Clock, Codepen, FileText, PlayFill } from "@geist-ui/react-icons"
 import { useEffect, useRef, useState } from "react"
 import "../util/bee"
 import { useHistory, useParams } from "react-router-dom"
@@ -22,10 +28,10 @@ import { CameraView } from "../component/cameraView"
 import {
   interactClose,
   interactInit,
+  interactSend,
   onSelfCameraChange,
   onSelfMicChange,
-  rtcEvent,
-  interactSend
+  rtcEvent
 } from "../model/interact"
 import { CompileRecord } from "../component/compileRecord"
 import { editorLang, InteractBoard, placeholder } from "../component/interactBoard"
@@ -36,7 +42,7 @@ import Activity from "@geist-ui/react-icons/activity"
 import Wifi from "@geist-ui/react-icons/wifi"
 import Infinity from "@geist-ui/react-icons/infinity"
 import Power from "@geist-ui/react-icons/power"
-import { getAvatarStyle, getRandomColor } from "../util/hash"
+import { getRandomColor } from "../util/hash"
 
 let client
 let cursorChangeTimeout
@@ -53,7 +59,7 @@ const Fields = () => {
     title: "",
   })
   const [duration, setDuration] = useState()
-  const [isConnected, setConnected] = useState()
+  const [isConnected, setConnected] = useState(false)
   const [heartbeatDelay, setHeartbeatDelay] = useState()
   const [userJoin, setUserJoin] = useState(null)
   const [remind, setRemind] = useState("设定提醒")
@@ -86,16 +92,16 @@ const Fields = () => {
           }
         })
 
-        window.onbeforeunload = (e) => {
-          e.returnValue = "确定离开当前页面吗？"
-        }
+        // window.onbeforeunload = (e) => {
+        //   e.returnValue = "确定离开当前页面吗？"
+        // }
       })
     }
 
     return () => {
+      interactClose()
       window.removeEventListener('visibilitychange', () => {
       })
-      interactClose()
     }
   }, [])
 
@@ -145,6 +151,7 @@ const Fields = () => {
       cameraDeviceID: cameraDeviceID,
       onConnected: onConnected,
       onDisconnected: onDisconnected,
+      onRemoveDuplicateConnection: onRemoveDuplicateConnection,
       onHeartbeatDelay: onHeartbeatDelay,
       onAddSelfStream: onAddSelfStream,
       onAddOtherStream: onAddOtherStream,
@@ -263,6 +270,15 @@ const Fields = () => {
   const onDisconnected = (event) => {
     setConnected(false)
     connect()
+  }
+
+  const onRemoveDuplicateConnection = () => {
+    setToast({
+      text: '您已经在其他设备加入会议',
+      type: 'error',
+      delay: 5000
+    })
+    history.push("/")
   }
 
   const connect = (callback) => {

@@ -42,6 +42,7 @@ export const interactInit = ({
                                cameraDeviceID,
                                onConnected,
                                onDisconnected,
+                               onRemoveDuplicateConnection,
                                onHeartbeatDelay,
                                onAddSelfStream,
                                onAddOtherStream,
@@ -125,11 +126,15 @@ export const interactInit = ({
   ws.onclose = (event) => {
     isConnected = false
     clearInterval(heartbeatInterval)
-    onDisconnected && onDisconnected(event)
+    if (event.code === 1013) {
+      // 重复连接被清除，不再重连
+      onRemoveDuplicateConnection && onRemoveDuplicateConnection()
+    } else {
+      onDisconnected && onDisconnected(event)
+    }
   }
 
   ws.onopen = (event) => {
-
   }
 
   heartbeatInterval = setInterval(() => {
