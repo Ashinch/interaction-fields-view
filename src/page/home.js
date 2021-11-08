@@ -24,6 +24,7 @@ const Home = () => {
   const history = useHistory()
   const [code, setCode] = useState("T3O7BP")
   const [toasts, setToast] = useToasts()
+  const headerRef = useRef()
 
   const enterMeeting = () => {
     console.log(code)
@@ -40,8 +41,8 @@ const Home = () => {
 
   return (
     <>
-      <Header width={1000} title="Interaction Fields" />
-      <Page width="1000px" paddingTop="100px">
+      <Header ref={headerRef} width={1000} title="Interaction Fields" />
+      <Page width="1000px" style={{paddingTop: 100}}>
         <Page.Content>
           <div style={{position: "absolute", top: 136, left: 0, right: 0}}>
             <div className="wrapper one">实时音视频通话 <span style={{fontSize: 25}}>1</span></div>
@@ -70,7 +71,7 @@ const Home = () => {
           </Grid.Container>
           <Grid.Container justify="center" alignItems="center">
             <p style={{width: 800, marginTop: 56, color: "#666", textAlign: "center"}}>
-              作为面试官<span style={{color: "#0070f3", cursor: "pointer"}}>发起</span>一场面试会议，或作为候选人受邀加入。
+              作为面试官<span style={{color: "#0070f3", cursor: "pointer"}} onClick={()=>headerRef?.current?.showCreate()}>发起</span>一场面试会议，或作为候选人受邀加入。
               <br />通过音视频¹进行实时通话交流，利用协同编辑²来展示您的编程能力，并通过在线编译³得到运行结果。
             </p>
           </Grid.Container>

@@ -39,6 +39,7 @@ import Power from "@geist-ui/react-icons/power"
 import { getAvatarStyle, getRandomColor } from "../util/hash"
 
 let client
+let cursorChangeTimeout
 let remindInterval
 let connectInterval
 let createAtInterval
@@ -65,6 +66,7 @@ const Fields = () => {
   const [showEnv, setShowEnv] = useState(false)
   const [showReconnect, setShowReconnect] = useState(false)
   const [showRemindLoading, setRemindLoading] = useState(false)
+  const [editValue, setEditValue] = useState("")
   const [noteValue, setNoteValue] = useState("# 会议笔记\n\n> 这里输入的文本仅自己可见（支持Markdown语法高亮）\n\n")
   const [toasts, setToast] = useToasts()
 
@@ -251,6 +253,7 @@ const Fields = () => {
       interactBoard?.current?.setValue(json.data.content)
     } else {
       interactBoard?.current?.setValue(placeholder[0])
+      setEditValue(placeholder[0])
       client.applyClient(TextOperation.fromJSON([placeholder[0]]))
     }
     onRemind({data: json.data.remind})
@@ -391,7 +394,11 @@ const Fields = () => {
   }
 
   const onSelfCursorChange = (editor) => {
-    interactSend(rtcEvent.cursorChange, editor.getCursor())
+    clearTimeout(cursorChangeTimeout)
+    cursorChangeTimeout = setTimeout(() => {
+      console.log("onSelfCursorChange", interactBoard?.current?.getSelection())
+      interactSend(rtcEvent.cursorChange, interactBoard?.current?.getSelection())
+    }, 100)
   }
 
   const onOtherCursorChange = (json) => {
@@ -473,7 +480,7 @@ const Fields = () => {
   return loading ? <Page><Spinner style={{position: "absolute", top: "50%", left: "50%"}} /></Page> : (
     <>
       <Header ref={headerRef} width={1500} title="Interaction Fields" subtitle={["会议室", code]} />
-      <Page paddingTop="100px">
+      <Page style={{paddingTop: 100}}>
         <Page.Content style={{paddingBottom: 0}}>
           <Grid.Container className="interaction-board" style={{width: "100%", height: "100%"}}
                           alignItems={"center"} justify={"center"} direction={"row"}>
@@ -489,6 +496,7 @@ const Fields = () => {
                           let del = 0 - length
                           let insert = placeholder[typeID - 1]
                           interactBoard?.current?.setValue(insert)
+                          setEditValue(placeholder[typeID - 1])
                           if (length === 0) {
                             client.applyClient(TextOperation.fromJSON([insert]))
                           } else {
@@ -514,14 +522,15 @@ const Fields = () => {
                 <Tabs initialValue="1">
                   <Tabs.Item label={<><Codepen />交互板</>} value="1" height="50px">
                     <div style={{display: "flex", flex: "1", height: "auto", padding: 24}}>
-                      <InteractBoard ref={interactBoard} language={language}
+                      <InteractBoard ref={interactBoard} editValue={editValue} language={language}
                                      onChanges={onSelfEditChange}
-                                     onChange={null} onCursorActivity={onSelfCursorChange} />
+                                     onChange={null}
+                                     onCursorActivity={onSelfCursorChange} />
                     </div>
                   </Tabs.Item>
                   <Tabs.Item label={<><FileText />笔记</>} value="2" height="50px">
                     <div style={{display: "flex", flex: "1", height: "auto", padding: 24}}>
-                      <InteractBoard ref={interactBoard} language={"markdown"}
+                      <InteractBoard editValue={noteValue} language={"markdown"}
                                      onChange={onNoteChange} onCursorActivity={() => {
                       }} />
                     </div>

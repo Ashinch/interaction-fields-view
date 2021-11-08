@@ -1,6 +1,16 @@
 import { API, HTTP } from '../util/http'
 
 export class Meeting {
+  create = ({title}) => new Promise(((resolve, reject) => {
+    HTTP.post(API.meetingCreate, {
+      title: title
+    }).then(res => {
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    })
+  }))
+
   statusByCode = ({code}) => new Promise(((resolve, reject) => {
     HTTP.get(
       API.meetingStatusByCode + code

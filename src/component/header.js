@@ -1,10 +1,11 @@
 import { Divider as DividerIcon } from "@geist-ui/react-icons"
-import { Avatar, Button, Divider, Link, Modal, Popover, Spacer, useToasts } from "@geist-ui/react"
+import { Avatar, Button, Divider, Input, Link, Modal, Popover, Spacer, useClipboard, useToasts } from "@geist-ui/react"
 import { Model } from "../model/model"
 import Login from "./login"
 import { forwardRef, useImperativeHandle, useState } from "react"
 import { getAvatarStyle, getRandomColor } from "../util/hash"
 import { useHistory } from "react-router-dom"
+import Display from "@geist-ui/react-icons/display"
 
 export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
   const history = useHistory()
@@ -12,14 +13,20 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
   const [password, setPassword] = useState("123")
   const [isSMS, setIsSMS] = useState()
   const [isLoginLoading, setIsLoginLoading] = useState()
-  const [visible, setVisible] = useState(false)
+  const [loginVisible, setLoginVisible] = useState(false)
+  const [createVisible, setCreateVisible] = useState(false)
+  const [meetingName, setMeetingName] = useState(Model.session.getInfo()?.user.name + "的会议")
   const [disableBackdropClick, setDisableBackdropClick] = useState(false)
   const [toasts, setToast] = useToasts()
+  const { copy } = useClipboard()
 
   useImperativeHandle(ref, () => ({
     showLogin: () => {
-      setVisible(true)
+      setLoginVisible(true)
       setDisableBackdropClick(true)
+    },
+    showCreate: () => {
+      setCreateVisible(true)
     }
   }))
 
@@ -46,7 +53,9 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
   const popContent = () => (
     <div>
       <Popover.Item>
-        <Link href="#" onClick={onClickAvatar}>发起新会议&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</Link>
+        <Link href="#" onClick={() => {
+          setCreateVisible(true)
+        }}>发起新会议&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</Link>
       </Popover.Item>
       <Popover.Item>
         <Link href="/personal/record">会议记录&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</Link>
@@ -62,8 +71,20 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
     </div>
   )
 
-  const onClickAvatar = (e) => {
-    console.log(getRandomColor("109fa65f-76cb-42a0-8da6-ca78ec81d5f9"))
+  const createMeeting = () => {
+    if (Bee.StringUtils.isBlank(meetingName)) return
+    Model.meeting.create({
+      title: meetingName
+    }).then((res) => {
+      let code = res.data.code
+      copy(code)
+      setToast({text: "会议创建成功，邀请码已复制到剪贴板，即将跳转至会议室", type: "success"})
+      setTimeout(()=>{
+        history.push(`/fields/${code}`)
+      }, 1000)
+    }).catch((err) => {
+      setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
+    })
   }
 
   return (
@@ -121,7 +142,7 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
               <Button auto type="abort">注册</Button>
               <Spacer w={1} />
               <Button auto type="secondary" onClick={() => {
-                setVisible(true)
+                setLoginVisible(true)
                 setDisableBackdropClick(false)
               }}>登录</Button>
             </>
@@ -129,8 +150,8 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
         </div>
       </div>
 
-      <Modal visible={visible} keyboard={false} disableBackdropClick={disableBackdropClick}
-             onClose={() => setVisible(false)}>
+      <Modal visible={loginVisible} keyboard={false} disableBackdropClick={disableBackdropClick}
+             onClose={() => setLoginVisible(false)}>
         <Modal.Title>登录</Modal.Title>
         <Modal.Subtitle>{isSMS ? "输入短信验证码登录" : "输入账号密码登录"}</Modal.Subtitle>
         <Modal.Content>
@@ -138,6 +159,17 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
         </Modal.Content>
         <Modal.Action passive onClick={() => setIsSMS(!isSMS)}>{isSMS ? "使用账号密码方式" : "使用短信验证方式"}</Modal.Action>
         <Modal.Action onClick={login} loading={isLoginLoading}>登录</Modal.Action>
+      </Modal>
+
+      <Modal visible={createVisible}
+             onClose={() => setCreateVisible(false)}>
+        <Modal.Title>创建会议</Modal.Title>
+        <Modal.Subtitle>以面试官的身份创建会议</Modal.Subtitle>
+        <Modal.Content style={{display: "flex", justifyContent: "center"}}>
+          <Input icon={<Display />} value={meetingName} clearable />
+        </Modal.Content>
+        <Modal.Action passive onClick={() => setCreateVisible(false)}>取消</Modal.Action>
+        <Modal.Action onClick={createMeeting} loading={isLoginLoading}>创建</Modal.Action>
       </Modal>
 
       <style jsx="true">{`

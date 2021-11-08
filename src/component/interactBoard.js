@@ -24,7 +24,13 @@ import 'codemirror/mode/python/python.js'
 import 'codemirror/mode/perl/perl.js'
 import 'codemirror/mode/clike/clike.js'
 
-const InteractBoard = forwardRef(({language, onChange, onChanges, onCursorActivity}, ref) => {
+const InteractBoard = forwardRef(({
+                                    editValue,
+                                    language,
+                                    onChange,
+                                    onChanges,
+                                    onCursorActivity
+                                  }, ref) => {
   const codeMirrorRef = useRef()
 
   useEffect(() => {
@@ -53,14 +59,21 @@ const InteractBoard = forwardRef(({language, onChange, onChanges, onCursorActivi
       codeMirrorRef?.current?.editor.doc.cm.foldCode(pos, null, "fold")
     },
     getSelection: () => {
-      return codeMirrorRef?.current?.editor.getSelection()
+      return {
+        from: codeMirrorRef?.current?.editor.doc.cm.getCursor(true),
+        to: codeMirrorRef?.current?.editor.doc.cm.getCursor(false)
+      }
     },
     clearOtherCursor: () => {
-      codeMirrorRef?.current?.editor.getAllMarks().forEach(item => item.clear())
+      codeMirrorRef?.current?.editor.doc.cm.getAllMarks().forEach(mark => mark.clear())
     },
-    setOtherCursor: (cursorPos, color, word) => {
+    setOtherCursor: (selectionRange, color, word) => {
       codeMirrorRef?.current?.editor.getAllMarks().forEach(item => item.clear())
+      const cursorPos = selectionRange.to
+      const anchor = selectionRange.from
+      const head = selectionRange.to
 
+      codeMirrorRef?.current?.editor.doc.cm.getAllMarks().forEach(mark => mark.clear())
       let cursorCoords = codeMirrorRef?.current?.editor.doc.cm.cursorCoords(cursorPos, "local")
       let startCoords = codeMirrorRef?.current?.editor.doc.cm.charCoords({line: 0, ch: 0}, "local")
       let lineHeight = codeMirrorRef?.current?.editor.doc.cm.defaultTextHeight()
@@ -103,13 +116,34 @@ const InteractBoard = forwardRef(({language, onChange, onChanges, onCursorActivi
       let nameTN = document.createTextNode(word)
       nameEl.appendChild(nameTN)
       codeMirrorRef?.current?.editor.doc.cm.setBookmark(cursorPos, {widget: nameEl, insertLeft: true})
+
+      if (anchor.line !== head.line || anchor.ch !== head.ch) {
+        const selectionClassName = 'selection-other'
+        const rule = '.' + selectionClassName + ' { background: ' + color + '; }'
+        addStyleRule(rule)
+        codeMirrorRef?.current?.editor.doc.cm.markText(anchor, head, {className: selectionClassName})
+      }
     }
   }))
+
+  const addStyleRule = (function () {
+    const added = {}
+    const styleElement = document.createElement('style')
+    document.documentElement.getElementsByTagName('head')[0].appendChild(styleElement)
+    const styleSheet = styleElement.sheet
+
+    return function (css) {
+      // if (added[css]) { return; }
+      added[css] = true
+      styleSheet.insertRule(css, (styleSheet.cssRules || styleSheet.rules).length)
+    }
+  }())
 
   return (
     <>
       <CodeMirror
         ref={codeMirrorRef}
+        value={editValue}
         options={{
           lineNumbers: true,
           mode: {name: language},
@@ -145,10 +179,6 @@ const InteractBoard = forwardRef(({language, onChange, onChanges, onCursorActivi
       />
 
       <style jsx="true">{`
-        .other-line {
-          background: #f6e3ff;
-        }
-
         .CodeMirror-gutters {
           border: unset !important;
           background-color: #fafafa !important;
