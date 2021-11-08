@@ -4,19 +4,18 @@ import "../util/bee.js"
 import { Avatar, Card, Select, Slider, Spacer, Text } from "@geist-ui/react"
 import { getDevices } from "../model/interact"
 import { Model } from "../model/model"
-import User from "@geist-ui/react-icons/user"
 import { getAvatarStyle } from "../util/hash"
 import UserX from "@geist-ui/react-icons/userX"
 
-const CameraView = forwardRef(({
-                                 connected,
-                                 isSelf,
-                                 isCreator,
-                                 userJoin,
-                                 onMicChange,
-                                 onCameraChange,
-                                 onCameraSwitch
-                               }, ref) => {
+export const CameraView = forwardRef(({
+                                        connected,
+                                        isSelf,
+                                        isCreator,
+                                        userJoin,
+                                        onMicChange,
+                                        onCameraChange,
+                                        onCameraSwitch
+                                      }, ref) => {
   const videoRef = useRef()
   const [micOff, setMicOff] = useState(true)
   const [cameraOff, setCameraOff] = useState(false)
@@ -26,7 +25,6 @@ const CameraView = forwardRef(({
   useEffect(() => {
     connected && isSelf && getDevices((devices) => {
       const cameras = devices.filter((device) => device.kind === "videoinput")
-      console.log(cameras)
       setCameraDevices(cameras)
       cameras[0]?.deviceId && setSelectValue(cameras[0].deviceId)
     })
@@ -123,9 +121,9 @@ const CameraView = forwardRef(({
                   {cameraDevices.map((item) => {
                     return <Select.Option key={item.deviceId} value={item.deviceId}>{item.label}</Select.Option>
                   })}
-                </Select>) : <Select placeholder="未检测到摄像设备" width="210px" disableMatchWidth disabled={true} />
+                </Select>) : <Select placeholder="未检测到摄像设备" width="210px" pure disableMatchWidth disabled={true} />
             ) : (
-              <Select value="" width="210px" disableMatchWidth disabled={true} />
+              <Select value="" width="210px" pure disableMatchWidth disabled={true} />
             )}
           </div>
           <Spacer w={1} />
@@ -190,5 +188,3 @@ const CameraView = forwardRef(({
     </>
   )
 })
-
-export default CameraView

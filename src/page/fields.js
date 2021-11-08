@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react"
 import "../util/bee"
 import { useHistory, useParams } from "react-router-dom"
 import { Model } from "../model/model"
-import CameraView from "../component/cameraView"
+import { CameraView } from "../component/cameraView"
 
 
 import {
@@ -27,8 +27,8 @@ import {
   rtcEvent,
   interactSend
 } from "../model/interact"
-import CompileRecord from "../component/compileRecord"
-import InteractBoard, { editorLang, placeholder } from "../component/interactBoard"
+import { CompileRecord } from "../component/compileRecord"
+import { editorLang, InteractBoard, placeholder } from "../component/interactBoard"
 import TextOperation from "../util/text-operation"
 import Client from "../util/client"
 import { Header } from "../component/header"
@@ -502,7 +502,7 @@ const Fields = () => {
                           } else {
                             client.applyClient(TextOperation.fromJSON([del, insert]))
                           }
-                        }}>初始化</Link>
+                        }}>代码模板</Link>
                   <Spacer w={1} />
                   <Select height="40px"
                           disableMatchWidth
@@ -610,14 +610,14 @@ const Fields = () => {
                 <div style={{display: "flex", alignItems: "center", width: 124}}>
                   <Activity color="#0cce6b" />
                   <Spacer w={1} />
-                  <Description title="HEARTBEAT-1" content={heartbeatDelay >= 0 ? heartbeatDelay + " ms" : "未知"} />
+                  <Description title="DELAY-SELF" content={heartbeatDelay >= 0 ? heartbeatDelay + " ms" : "未知"} />
                 </div>
 
                 <Tooltip text={'缓存是达到高性能的重要组成部分'} enterDelay={500} placement="bottom" type="dark">
                   <div style={{display: "flex", alignItems: "center", width: 124}}>
                     <Activity color="#F5A623" />
                     <Spacer w={1} />
-                    <Description title="HEARTBEAT-2" content={"未知"} />
+                    <Description title="DELAY-OTHER" content={"未知"} />
                   </div>
                 </Tooltip>
 

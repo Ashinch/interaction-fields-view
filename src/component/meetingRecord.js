@@ -1,28 +1,17 @@
-import {
-  Fieldset,
-  Input,
-  Loading,
-  Modal,
-  Pagination,
-  Select,
-  Spacer,
-  Table,
-  Text,
-  Textarea,
-  useToasts
-} from '@geist-ui/react'
+import { Fieldset, Input, Loading, Pagination, Select, Spacer, Table, Text, useToasts } from '@geist-ui/react'
 import "../util/bee.js"
 import Search from "@geist-ui/react-icons/search"
 import ChevronRight from "@geist-ui/react-icons/chevronRight"
 import ChevronLeft from "@geist-ui/react-icons/chevronLeft"
 import { useEffect, useState } from "react"
 import { Model } from "../model/model"
-import CompileRecord from "./compileRecord"
+import { TextareaModal } from "./modal/textareaModal"
+import { CompileRecordModal } from "./modal/compileRecordModal"
 
 const pageSize = 8
 let timeout
 
-const MeetingRecord = ({}) => {
+export const MeetingRecord = ({}) => {
   const [records, setRecords] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -35,6 +24,7 @@ const MeetingRecord = ({}) => {
   const [textModalContent, setTextModalContent] = useState("")
   const [compileModalUUID, setCompileModalUUID] = useState("")
   const [toasts, setToast] = useToasts()
+
   useEffect(() => {
     getRecordList(onlyCreator, "", page, pageSize)
   }, [])
@@ -122,21 +112,12 @@ const MeetingRecord = ({}) => {
         </Fieldset.Footer>
       </Fieldset>
 
-      <Modal width="700px" visible={showTextModal} onClose={() => setTextModal(false)}>
-        <Modal.Title>{textModalTitle}</Modal.Title>
-        <Modal.Content>
-          <Textarea initialValue={textModalContent} readOnly width="100%" height="200px" />
-        </Modal.Content>
-      </Modal>
+      <TextareaModal width="700px" visible={showTextModal} setVisible={setTextModal} title={textModalTitle}
+                     content={textModalContent} />
 
-      <Modal width="800px" visible={showCompileModal} onClose={() => setCompileModal(false)}>
-        <Modal.Title>运行记录</Modal.Title>
-        <Modal.Content>
-          <CompileRecord meetingUUID={compileModalUUID} />
-        </Modal.Content>
-      </Modal>
+      <CompileRecordModal width="800px" visible={showCompileModal} setVisible={setCompileModal} title="运行记录"
+                          meetingUUID={compileModalUUID} />
     </>
   )
 }
 
-export default MeetingRecord

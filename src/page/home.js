@@ -1,22 +1,7 @@
-import {
-  Button,
-  Display,
-  Grid,
-  Image,
-  Input,
-  Page,
-  Spacer,
-  useModal,
-  Modal,
-  Code,
-  useToasts,
-  Avatar
-} from '@geist-ui/react'
-import { createRef, useRef, useState } from "react"
-import { useHistory, useRouteMatch } from "react-router-dom"
+import { Button, Grid, Input, Page, useToasts } from '@geist-ui/react'
+import { useRef, useState } from "react"
+import { useHistory } from "react-router-dom"
 import "../util/bee"
-import Login from "../component/login"
-import { Session } from "../model/session"
 import { Model } from "../model/model"
 import { Header } from "../component/header"
 
@@ -26,7 +11,7 @@ const Home = () => {
   const [toasts, setToast] = useToasts()
   const headerRef = useRef()
 
-  const enterMeeting = () => {
+  const joinMeeting = () => {
     console.log(code)
     if (Bee.StringUtils.isNotBlank(code)) {
       Model.meeting.statusByCode({
@@ -37,6 +22,30 @@ const Home = () => {
         setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
       })
     }
+  }
+
+  const createMeeting = () => {
+    Model.meeting.statusByUser().then((res) => {
+      if (res.data) {
+        setToast({
+          text: "您已有一个进行中的会议",
+          actions: [
+            {
+              name: "带我过去", handler: (event, cancel) => {
+                history.push("/fields/" + res.data.code)
+                cancel()
+              }
+            },
+            {name: "结束并关闭它", handler: null},
+          ],
+          delay: 10000
+        })
+      } else {
+        headerRef?.current?.showCreate()
+      }
+    }).catch((err) => {
+      setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
+    })
   }
 
   return (
@@ -64,14 +73,14 @@ const Home = () => {
             <Grid justify="center">
               <Button type="secondary-light" height="54px" width="54px"
                       disabled={Bee.StringUtils.isBlank(code)}
-                      onClick={enterMeeting}>
+                      onClick={joinMeeting}>
                 加入
               </Button>
             </Grid>
           </Grid.Container>
           <Grid.Container justify="center" alignItems="center">
             <p style={{width: 800, marginTop: 56, color: "#666", textAlign: "center"}}>
-              作为面试官<span style={{color: "#0070f3", cursor: "pointer"}} onClick={()=>headerRef?.current?.showCreate()}>发起</span>一场面试会议，或作为候选人受邀加入。
+              作为面试官<span style={{color: "#0070f3", cursor: "pointer"}} onClick={createMeeting}>发起</span>一场面试会议，或作为候选人受邀加入。
               <br />通过音视频¹进行实时通话交流，利用协同编辑²来展示您的编程能力，并通过在线编译³得到运行结果。
             </p>
           </Grid.Container>

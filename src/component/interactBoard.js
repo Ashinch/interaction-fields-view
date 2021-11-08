@@ -24,7 +24,7 @@ import 'codemirror/mode/python/python.js'
 import 'codemirror/mode/perl/perl.js'
 import 'codemirror/mode/clike/clike.js'
 
-const InteractBoard = forwardRef(({
+export const InteractBoard = forwardRef(({
                                     editValue,
                                     language,
                                     onChange,
@@ -268,4 +268,3 @@ export const editorLang = [
   "text/x-c++src",
 ]
 
-export default InteractBoard

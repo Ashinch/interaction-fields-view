@@ -4,8 +4,9 @@ import { Modal, Pagination, Spacer, Spinner, Table, Textarea, useToasts } from "
 import { Model } from "../model/model"
 import ChevronRight from "@geist-ui/react-icons/chevronRight"
 import ChevronLeft from "@geist-ui/react-icons/chevronLeft"
+import { TextareaModal } from "./modal/textareaModal"
 
-const CompileRecord = ({meetingUUID}) => {
+export const CompileRecord = ({meetingUUID}) => {
   const [records, setRecords] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -13,7 +14,6 @@ const CompileRecord = ({meetingUUID}) => {
   const [showModal, setShowModal] = useState(false)
   const [modalContent, setModalContent] = useState()
   const [modalTitle, setModalTitle] = useState()
-  const [modalSubTitle, setModalSubTitle] = useState()
 
   useEffect(() => {
     getRecordList(1, 8)
@@ -59,7 +59,6 @@ const CompileRecord = ({meetingUUID}) => {
       attachmentUUID: item.uuid
     }).then((res) => {
       setModalTitle("提交代码")
-      setModalSubTitle(item.uuidTrim)
       setModalContent(res.data)
       setShowModal(true)
     })
@@ -70,14 +69,9 @@ const CompileRecord = ({meetingUUID}) => {
       attachmentUUID: item.uuid
     }).then((res) => {
       setModalTitle("输出信息")
-      setModalSubTitle(item.uuidTrim)
       setModalContent(res.data)
       setShowModal(true)
     })
-  }
-
-  const onCloseModal = (e) => {
-    setShowModal(false)
   }
 
   return loading ? <Spinner style={{position: "relative", top: 100, left: "50%"}} /> : (
@@ -106,12 +100,7 @@ const CompileRecord = ({meetingUUID}) => {
         </Pagination>
       </div>
 
-      <Modal visible={showModal} onClose={onCloseModal}>
-        <Modal.Title>{modalTitle}</Modal.Title>
-        <Modal.Content>
-          <Textarea initialValue={modalContent} readOnly width="100%" height="200px" />
-        </Modal.Content>
-      </Modal>
+      <TextareaModal width="700px" visible={showModal} setVisible={setShowModal} title={modalTitle} content={modalContent} />
 
       <style jsx="true">{`
         .pageControl {
@@ -123,5 +112,3 @@ const CompileRecord = ({meetingUUID}) => {
     </div>
   )
 }
-
-export default CompileRecord

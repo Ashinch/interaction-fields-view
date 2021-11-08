@@ -2,8 +2,8 @@ import { Fieldset, Page, useToasts } from '@geist-ui/react'
 import { useHistory, useParams } from "react-router-dom"
 import "../util/bee"
 import { Header } from "../component/header"
-import UserSettings from "../component/userSettings"
-import MeetingRecord from "../component/meetingRecord"
+import { UserSettings } from "../component/userSettings"
+import { MeetingRecord } from "../component/meetingRecord"
 import { useEffect } from "react"
 import { Model } from "../model/model"
 
@@ -14,7 +14,7 @@ const Personal = () => {
 
   useEffect(() => {
     if (!Model.session.isLogin()) {
-      setToast({text: "未登录", type: "error"})
+      setToast({text: "请先登录", type: "error"})
       history.push("/")
     }
   }, [])

@@ -12,9 +12,17 @@ export class Meeting {
   }))
 
   statusByCode = ({code}) => new Promise(((resolve, reject) => {
-    HTTP.get(
-      API.meetingStatusByCode + code
-    ).then(res => {
+    HTTP.post(API.meetingStatusByCode, {
+      code: code
+    }).then(res => {
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    })
+  }))
+
+  statusByUser = () => new Promise(((resolve, reject) => {
+    HTTP.post(API.meetingStatusByUser).then(res => {
       resolve && resolve(res)
     }).catch(err => {
       reject && reject(err)
