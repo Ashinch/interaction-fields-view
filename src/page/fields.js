@@ -1,5 +1,5 @@
 import {
-  Button,
+  Button, Code,
   Description,
   Divider,
   Grid,
@@ -26,6 +26,7 @@ import { CameraView } from "../component/cameraView"
 
 
 import {
+  changeVolume,
   interactClose,
   interactInit,
   interactSend,
@@ -43,6 +44,11 @@ import Wifi from "@geist-ui/react-icons/wifi"
 import Infinity from "@geist-ui/react-icons/infinity"
 import Power from "@geist-ui/react-icons/power"
 import { getRandomColor } from "../util/hash"
+import UploadCloud from "@geist-ui/react-icons/uploadCloud"
+import DownloadCloud from "@geist-ui/react-icons/downloadCloud"
+import ArrowUp from "@geist-ui/react-icons/arrowUp"
+import ArrowDown from "@geist-ui/react-icons/arrowDown"
+import { ToastModal, toastModal } from "../component/modal/toastModal"
 
 let client
 let cursorChangeTimeout
@@ -63,12 +69,15 @@ const Fields = () => {
   const [heartbeatDelay, setHeartbeatDelay] = useState()
   const [userJoin, setUserJoin] = useState(null)
   const [remind, setRemind] = useState("设定提醒")
-  const [bitrate, setBitrate] = useState()
+  const [upstream, setUpstream] = useState()
+  const [downstream, setDownstream] = useState()
   const [delay, setDelay] = useState()
   const [typeID, setTypeID] = useState(1)
   const [language, setLanguage] = useState(editorLang[typeID])
   const [isRun, setIsRun] = useState(false)
   const [canRun, setCanRun] = useState(true)
+  const [showExit, setShowExit] = useState(false)
+  const [showExitLoading, setShowExitLoading] = useState(false)
   const [showEnv, setShowEnv] = useState(false)
   const [showReconnect, setShowReconnect] = useState(false)
   const [showRemindLoading, setRemindLoading] = useState(false)
@@ -163,6 +172,7 @@ const Fields = () => {
       onACK: onACK,
       onJoin: onJoin,
       onQuit: onQuit,
+      onClose: onClose,
       onOtherCursorChange: onOtherCursorChange,
       onOtherLanguageChange: onOtherLanguageChange,
       onJudgeResultReceive: onJudgeResultReceive,
@@ -329,12 +339,11 @@ const Fields = () => {
       })
     }
     clearInterval(connectInterval)
-    // connectHandler()
     connectInterval = setInterval(connectHandler, 1000)
   }
 
-  const onHeartbeatDelay = (json) => {
-    setHeartbeatDelay(json.data)
+  const onHeartbeatDelay = (data) => {
+    setHeartbeatDelay(data)
   }
 
   const onACK = (json) => {
@@ -358,6 +367,11 @@ const Fields = () => {
       text: json.data.name + "退出会议",
       type: "error",
     })
+  }
+
+  const onClose = (json) => {
+    interactClose()
+    history.push("/")
   }
 
   const onOperation = (json) => {
@@ -451,6 +465,10 @@ const Fields = () => {
     })
   }
 
+  const onOtherVolumeChange = (e) => {
+    changeVolume(e)
+  }
+
   const onRunClick = () => {
     let code = interactBoard?.current?.getValue()
     const selectedValue = interactBoard?.current?.getSelection()
@@ -479,8 +497,9 @@ const Fields = () => {
     })
   }
 
-  const onStats = ({bitrate, delay}) => {
-    setBitrate(bitrate)
+  const onStats = ({upstream, downstream, delay}) => {
+    setUpstream(upstream)
+    setDownstream(downstream)
     setDelay(delay)
   }
 
@@ -491,6 +510,29 @@ const Fields = () => {
 
   const onNoteChange = (editor, data, value) => {
     interactSend(rtcEvent.note, value)
+  }
+
+  const onCloseClick = () => {
+    if (Model.session.isMe(meetingStatus?.creatorUUID)) {
+      setShowExit(true)
+    } else {
+      history.push("/")
+    }
+  }
+
+  const closeMeeting = () => {
+    setShowExitLoading(true)
+    Model.meeting.close().then((res) => {
+      setToast({
+        text: "会议已关闭",
+        type: "error",
+      })
+      history.push("/")
+    }).catch((err) => {
+      setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
+    }).finally(() => {
+      setShowExitLoading(false)
+    })
   }
 
   return loading ? <Page><Spinner style={{position: "absolute", top: "50%", left: "50%"}} /></Page> : (
@@ -595,7 +637,8 @@ const Fields = () => {
                     </Tooltip>
                   }
                   <Spacer w={1} />
-                  <Button auto type="error" ghost iconRight={<Power />} onClick={onRunClick}>结束会议</Button>
+                  <Button auto type="error" ghost iconRight={<Power />}
+                          onClick={onCloseClick}>{Model.session.isMe(meetingStatus?.creatorUUID) ? "结束" : "退出"}会议</Button>
                 </div>
               </Grid.Container>
               <Divider style={{margin: 0}} />
@@ -607,7 +650,8 @@ const Fields = () => {
                               userJoin={userJoin}
                               isSelf onMicChange={() => onSelfMicChange(selfCameraRef.current?.micOff)}
                               onCameraChange={() => onSelfCameraChange(selfCameraRef.current?.cameraOff)}
-                              onCameraSwitch={onCameraSwitch} />
+                              onCameraSwitch={onCameraSwitch}
+                              onOtherVolumeChange={onOtherVolumeChange} />
                   <Spacer w="24px" />
                   <CameraView ref={otherCameraRef} userJoin={userJoin} />
                 </>) : (<>
@@ -618,34 +662,37 @@ const Fields = () => {
                               userJoin={userJoin}
                               isSelf onMicChange={() => onSelfMicChange(selfCameraRef.current?.micOff)}
                               onCameraChange={() => onSelfCameraChange(selfCameraRef.current?.cameraOff)}
-                              onCameraSwitch={onCameraSwitch} />
+                              onCameraSwitch={onCameraSwitch}
+                              onOtherVolumeChange={onOtherVolumeChange} />
                 </>)}
               </div>
               <Divider style={{margin: 0}} />
               <Grid.Container justify={"space-between"} style={{padding: 24}}>
-                <div style={{display: "flex", alignItems: "center", width: 124}}>
-                  <Activity color="#0cce6b" />
-                  <Spacer w={1} />
-                  <Description title="DELAY-SELF" content={heartbeatDelay >= 0 ? heartbeatDelay + " ms" : "未知"} />
-                </div>
-
-                <Tooltip text={'缓存是达到高性能的重要组成部分'} enterDelay={500} placement="bottom" type="dark">
+                <Tooltip text={'信令服务平均延迟'} enterDelay={500} placement="top" type="dark">
                   <div style={{display: "flex", alignItems: "center", width: 124}}>
-                    <Activity color="#F5A623" />
+                    <Activity color="#0cce6b" />
                     <Spacer w={1} />
-                    <Description title="DELAY-OTHER" content={"未知"} />
+                    <Description title="SIGNAL" content={heartbeatDelay >= 0 ? heartbeatDelay + " ms" : "未知"} />
                   </div>
                 </Tooltip>
 
-                <Tooltip text={'媒体上行比特率'} enterDelay={500} placement="bottom" type="dark">
+                <Tooltip text={'媒体上行比特率'} enterDelay={500} placement="top" type="dark">
                   <div style={{display: "flex", alignItems: "center", width: 124}}>
-                    <Wifi />
+                    <ArrowUp color="#0070f3" />
                     <Spacer w={1} />
-                    <Description title="BITRATE-UP" content={bitrate ? bitrate + " KB/s" : "未知"} />
+                    <Description title="UPSTREAM" content={upstream ? upstream + " KB/s" : "未知"} />
                   </div>
                 </Tooltip>
 
-                <Tooltip text={'对等连接出口延迟'} enterDelay={500} placement="bottom" type="dark">
+                <Tooltip text={'媒体下行比特率'} enterDelay={500} placement="top" type="dark">
+                  <div style={{display: "flex", alignItems: "center", width: 124}}>
+                    <ArrowDown color="#F5A623" />
+                    <Spacer w={1} />
+                    <Description title="DOWNSTREAM" content={downstream ? downstream + " KB/s" : "未知"} />
+                  </div>
+                </Tooltip>
+
+                <Tooltip text={'对等连接出口延迟'} enterDelay={500} placement="top" type="dark">
                   <div style={{display: "flex", alignItems: "center", width: 97}}>
                     <Infinity color="#EE0000" />
                     <Spacer w={1} />
@@ -656,6 +703,13 @@ const Fields = () => {
             </Grid>
           </Grid.Container>
         </Page.Content>
+
+        <ToastModal visible={showExit} setVisible={setShowExit}
+                    title="结束会议" subtitle="为双方结束并退出这场会议"
+                    content={<p>双方在参会过程中所有的<Code>运行记录</Code>以及当前<Code>交互板</Code>和
+                      <Code>笔记板</Code>中的内容都能得到保存，您可以在个人<Code>会议记录</Code>中回顾。</p>}
+                    showLoading={showExitLoading} actionText="确定结束" passiveText="继续会议"
+                    actionHandler={closeMeeting} passiveHandler={() => setShowExit(false)} />
 
         <Modal width="35rem" visible={showEnv} onClose={() => setShowEnv(false)}>
           <Modal.Title>环境说明</Modal.Title>

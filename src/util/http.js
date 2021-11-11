@@ -43,6 +43,7 @@ export const API = {
   userEdit: PREFIX + '/user-service/edit',
   userChangePwd: PREFIX + '/user-service/changePwd',
   meetingCreate: PREFIX + '/meeting-service/create',
+  meetingClose: PREFIX + '/meeting-service/close',
   meetingStatusByCode: PREFIX + '/meeting-service/statusByCode',
   meetingStatusByUser: PREFIX + '/meeting-service/statusByUser',
   meetingRecord: PREFIX + '/meeting-service/record',

@@ -11,6 +11,14 @@ export class Meeting {
     })
   }))
 
+  close = () => new Promise(((resolve, reject) => {
+    HTTP.post(API.meetingClose, null).then(res => {
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    })
+  }))
+
   statusByCode = ({code}) => new Promise(((resolve, reject) => {
     HTTP.post(API.meetingStatusByCode, {
       code: code

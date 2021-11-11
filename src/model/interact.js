@@ -1,9 +1,14 @@
+import { IntQueue } from "../util/queue"
+
 let ws
 let pc
 let rtcStream
 let statsInterval
 let heartbeatInterval
 let isConnected = true
+let audioContext = new AudioContext()
+let gainNode = audioContext.createGain()
+let heartbeats = new IntQueue(10)
 
 // stun和turn服务器
 export const iceServer = {
@@ -26,6 +31,7 @@ export const rtcEvent = {
   ack: "ack",
   join: "join",
   quit: "quit",
+  close: "close",
   cursorChange: "cursorChange",
   languageChange: "languageChange",
   judgeResultReceive: "judgeResultReceive",
@@ -54,6 +60,7 @@ export const interactInit = ({
                                onACK,
                                onJoin,
                                onQuit,
+                               onClose,
                                onOtherCursorChange,
                                onOtherLanguageChange,
                                onJudgeResultReceive,
@@ -89,7 +96,8 @@ export const interactInit = ({
         onHidden && onHidden(json)
         break
       case rtcEvent.heartbeat:
-        onHeartbeatDelay && onHeartbeatDelay(json)
+        heartbeats.enqueue((new Date().getTime() - json.data) / 2)
+        onHeartbeatDelay && onHeartbeatDelay(Math.round(heartbeats.sum() / heartbeats.size()))
         break
       case rtcEvent.ack:
         onACK && onACK(json)
@@ -99,6 +107,9 @@ export const interactInit = ({
         break
       case rtcEvent.quit:
         onQuit && onQuit(json)
+        break
+      case rtcEvent.close:
+        onClose && onClose(json)
         break
       case rtcEvent.cursorChange:
         onOtherCursorChange && onOtherCursorChange(json)
@@ -126,11 +137,16 @@ export const interactInit = ({
   ws.onclose = (event) => {
     isConnected = false
     clearInterval(heartbeatInterval)
-    if (event.code === 1013) {
-      // 重复连接被清除，不再重连
-      onRemoveDuplicateConnection && onRemoveDuplicateConnection()
-    } else {
-      onDisconnected && onDisconnected(event)
+    switch (event.code) {
+      case 3000:
+        // 主动关闭，不再重连
+        break
+      case 1013:
+        // 重复连接被清除，不再重连
+        onRemoveDuplicateConnection && onRemoveDuplicateConnection()
+        break
+      default:
+        onDisconnected && onDisconnected(event)
     }
   }
 
@@ -138,7 +154,8 @@ export const interactInit = ({
   }
 
   heartbeatInterval = setInterval(() => {
-    interactSend(rtcEvent.heartbeat, new Date().getTime())
+    let time = new Date().getTime()
+    interactSend(rtcEvent.heartbeat, time)
   }, 3000)
 
   pc = new RTCPeerConnection(iceServer)
@@ -153,11 +170,14 @@ export const interactInit = ({
   pc.onaddstream = (event) => {
     console.info("onAddOtherStream")
     onAddOtherStream && onAddOtherStream(event.stream)
-    let bytesPrev = 0
-    let bytesTimestampPrev = 0
+    let upstreamBytesPrev = 0
+    let upstreamBytesTimestampPrev = 0
+    let downstreamBytesPrev = 0
+    let downstreamBytesTimestampPrev = 0
     let delayTimestampPrev = 0
 
-    let bitrate
+    let upstream
+    let downstream
     let delay
     clearInterval(statsInterval)
     statsInterval = setInterval(() => {
@@ -167,15 +187,23 @@ export const interactInit = ({
 
           if (report.type === 'outbound-rtp' && report.mediaType === 'video') {
             const bytes = report.bytesSent
-            if (bytesTimestampPrev) {
-              bitrate = (bytes - bytesPrev) / (now - bytesTimestampPrev)
-              bitrate = Math.floor(bitrate)
+            if (upstreamBytesTimestampPrev) {
+              upstream = (bytes - upstreamBytesPrev) / (now - upstreamBytesTimestampPrev)
+              upstream = Math.floor(upstream)
             }
-            bytesPrev = bytes
-            bytesTimestampPrev = now
+            upstreamBytesPrev = bytes
+            upstreamBytesTimestampPrev = now
           }
 
           if (report.type === 'inbound-rtp' && report.mediaType === 'video') {
+            const bytes = report.bytesReceived
+            if (downstreamBytesTimestampPrev) {
+              downstream = (bytes - downstreamBytesPrev) / (now - downstreamBytesTimestampPrev)
+              downstream = Math.floor(downstream)
+            }
+            downstreamBytesPrev = bytes
+            downstreamBytesTimestampPrev = now
+
             if (delayTimestampPrev) {
               delay = now - delayTimestampPrev
             }
@@ -183,13 +211,15 @@ export const interactInit = ({
           }
 
           onStats && onStats({
-            bitrate: bitrate,
+            upstream: upstream,
+            downstream: downstream,
             delay: delay
           })
         })
       })
     }, 1000)
   }
+
 
   navigator.getUserMedia =
     navigator.getUserMedia ||
@@ -207,11 +237,23 @@ export const interactInit = ({
     },
     (stream) => {
       if (!isConnected) return
-      console.info("onAddSelfStream")
+      console.info("onAddSelfStream", stream)
+
+      // audioContext = new AudioContext()
+      // gainNode = audioContext.createGain();
+      // let audioSource = audioContext.createMediaStreamSource(stream);
+      // let audioDestination = audioContext.createMediaStreamDestination();
+      // audioSource.connect(gainNode);
+      // gainNode.connect(audioDestination);
+      // gainNode.gain.value = 1;
+      // console.log("audioDestination", audioDestination)
+
+      // rtcStream = audioDestination.stream
       rtcStream = stream
       onSelfMicChange(false)
-      onAddSelfStream && onAddSelfStream(stream)
-      pc.addStream(stream)
+
+      onAddSelfStream && onAddSelfStream(rtcStream)
+      pc.addStream(rtcStream)
       //如果是发起方则发送一个offer信令
       // if (isCreator != null && !isCreator) {
       pc.createOffer((desc) => {
@@ -231,7 +273,9 @@ export const interactSend = (event, data) => {
     "event": event,
     "data": data
   }))
-  console.info("Send", event)
+  if (event !== event.heartbeat) {
+    console.info("Send", event, data)
+  }
 }
 
 export const onSelfMicChange = (enabled) => {
@@ -248,8 +292,8 @@ export const isWSReady = () => {
   return ws && ws.readyState === 1
 }
 
-export const interactClose = () => {
-  ws && ws.close()
+export const interactClose = (code = 3000) => {
+  ws && ws.close(code)
   pc && pc.close()
   rtcStream && console.info("RTC close", rtcStream.getTracks())
   rtcStream && rtcStream.getTracks().forEach(i => i.stop())
@@ -260,4 +304,9 @@ export const getDevices = (callback) => {
     .then(function (devices) {
       callback && callback(devices)
     })
+}
+
+export const changeVolume = (e) => {
+  console.log("changeVolume", e)
+  gainNode.gain.value = e
 }

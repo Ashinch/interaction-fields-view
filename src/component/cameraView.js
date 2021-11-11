@@ -14,7 +14,8 @@ export const CameraView = forwardRef(({
                                         userJoin,
                                         onMicChange,
                                         onCameraChange,
-                                        onCameraSwitch
+                                        onCameraSwitch,
+                                        onOtherVolumeChange
                                       }, ref) => {
   const videoRef = useRef()
   const [micOff, setMicOff] = useState(true)
@@ -28,7 +29,7 @@ export const CameraView = forwardRef(({
       setCameraDevices(cameras)
       cameras[0]?.deviceId && setSelectValue(cameras[0].deviceId)
     })
-  }, [])
+  }, [connected])
 
   useImperativeHandle(ref, () => ({
     micOff: micOff,
@@ -134,7 +135,14 @@ export const CameraView = forwardRef(({
             }</div>
             <Spacer w={1.2} />
             <Slider h={1.2} width="75%" initialValue={100}
-                    disabled={(isSelf && connected) ? micOff : userJoin == null || micOff} />
+                    disabled={(isSelf && connected) ? micOff : userJoin == null || micOff}
+                    onChange={(e) => {
+                      if (isSelf && connected) {
+                        onOtherVolumeChange && onOtherVolumeChange(e / 100)
+                      } else {
+                        videoRef.current.volume = e / 100
+                      }
+                    }} />
           </div>
         </Card>
       </div>
