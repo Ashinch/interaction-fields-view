@@ -425,10 +425,10 @@ const Fields = () => {
 
   const onSelfCursorChange = (editor) => {
     clearTimeout(cursorChangeTimeout)
-    cursorChangeTimeout = setTimeout(() => {
+    // cursorChangeTimeout = setTimeout(() => {
       console.log("onSelfCursorChange", interactBoard?.current?.getSelection())
       interactSend(rtcEvent.cursorChange, interactBoard?.current?.getSelection())
-    }, 100)
+    // }, 100)
   }
 
   const onOtherCursorChange = (json) => {
@@ -471,9 +471,8 @@ const Fields = () => {
 
   const onRunClick = () => {
     let code = interactBoard?.current?.getValue()
-    const selectedValue = interactBoard?.current?.getSelection()
-    if (Bee.StringUtils.isNotBlank(selectedValue)) {
-      code = selectedValue
+    if (Bee.StringUtils.isBlank(code)) {
+      setToast({text: `不得为空`, type: "error"})
     }
     setIsRun(true)
     Model.judge.commit({
@@ -481,6 +480,7 @@ const Fields = () => {
     }).then((res) => {
     }).catch((err) => {
       setIsRun(false)
+      setToast({text: `${err.msg ? err.msg : err}`, type: "error"})
       console.log(err)
     })
   }

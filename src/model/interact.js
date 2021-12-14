@@ -174,7 +174,6 @@ export const interactInit = ({
     let upstreamBytesTimestampPrev = 0
     let downstreamBytesPrev = 0
     let downstreamBytesTimestampPrev = 0
-    let delayTimestampPrev = 0
 
     let upstream
     let downstream
@@ -185,6 +184,9 @@ export const interactInit = ({
         stats.forEach(report => {
           const now = report.timestamp
 
+          if (report.type === "remote-inbound-rtp") {
+            delay = report.roundTripTime * 1000
+          }
           if (report.type === 'outbound-rtp' && report.mediaType === 'video') {
             const bytes = report.bytesSent
             if (upstreamBytesTimestampPrev) {
@@ -203,11 +205,6 @@ export const interactInit = ({
             }
             downstreamBytesPrev = bytes
             downstreamBytesTimestampPrev = now
-
-            if (delayTimestampPrev) {
-              delay = now - delayTimestampPrev
-            }
-            delayTimestampPrev = now
           }
 
           onStats && onStats({
