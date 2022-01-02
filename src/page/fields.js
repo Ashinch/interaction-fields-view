@@ -81,13 +81,13 @@ const Fields = () => {
   const [showEnv, setShowEnv] = useState(false)
   const [showReconnect, setShowReconnect] = useState(false)
   const [showRemindLoading, setRemindLoading] = useState(false)
-  const [editValue, setEditValue] = useState("")
-  const [noteValue, setNoteValue] = useState("# 会议笔记\n\n> 这里输入的文本仅自己可见（支持Markdown语法高亮）\n\n")
+  const [noteValue, setNoteValue] = useState("")
   const [toasts, setToast] = useToasts()
 
   const otherCameraRef = useRef()
   const selfCameraRef = useRef()
   const interactBoard = useRef()
+  const noteBoard = useRef()
   const headerRef = useRef()
 
   useEffect(() => {
@@ -115,6 +115,7 @@ const Fields = () => {
   }, [])
 
   const onAddSelfStream = (stream) => {
+    console.info("onAddSelfStream", stream)
     selfCameraRef.current?.setStream(stream)
   }
 
@@ -153,11 +154,10 @@ const Fields = () => {
   }
 
 
-  const init = ({url, isCreator, cameraDeviceID}) =>
+  const init = ({url, isCreator}) =>
     interactInit({
       url: url,
       isCreator: isCreator,
-      cameraDeviceID: cameraDeviceID,
       onConnected: onConnected,
       onDisconnected: onDisconnected,
       onRemoveDuplicateConnection: onRemoveDuplicateConnection,
@@ -167,6 +167,8 @@ const Fields = () => {
       onOtherMicChange: onOtherMicChange,
       onOtherCameraChange: onOtherCameraChange,
       onOperation: onOperation,
+      onPullDocument: onPullDocument,
+      onPullNote: onPullNote,
       onRemind: onRemind,
       onHidden: onHidden,
       onACK: onACK,
@@ -180,6 +182,7 @@ const Fields = () => {
     })
 
   const onSelfEditChange = (editor, changes) => {
+    console.log("onSelfEditChange")
     setCanRun(editor.doc.getValue()?.length <= 0)
     if (changes[0].origin === undefined) {
       return
@@ -264,17 +267,9 @@ const Fields = () => {
     setLanguage(editorLang[json.data.languageId])
     setTypeID(json.data.languageId)
     setShowReconnect(false)
-    client = new Client(json.data.version)
-    client.setCM(interactBoard?.current?.getCM())
-    if (Bee.StringUtils.isNotBlank(json.data.content)) {
-      interactBoard?.current?.setValue(json.data.content)
-    } else {
-      interactBoard?.current?.setValue(placeholder[0])
-      setEditValue(placeholder[0])
-      client.applyClient(TextOperation.fromJSON([placeholder[0]]))
-    }
+    onPullDocument(json)
+    onPullNote(json)
     onRemind({data: json.data.remind})
-    json.data.note && setNoteValue(json.data.note)
   }
 
   const onDisconnected = (event) => {
@@ -303,7 +298,6 @@ const Fields = () => {
         init({
           url: `wss://${res.data.ip}:${res.data.port}/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`,
           isCreator: Model.session.isMe(res.data.creatorUUID),
-          cameraDeviceID: "cameraDeviceID"
         })
         clearInterval(connectInterval)
         const creatAtHandler = () => {
@@ -425,10 +419,10 @@ const Fields = () => {
 
   const onSelfCursorChange = (editor) => {
     clearTimeout(cursorChangeTimeout)
-    // cursorChangeTimeout = setTimeout(() => {
+    cursorChangeTimeout = setTimeout(() => {
       console.log("onSelfCursorChange", interactBoard?.current?.getSelection())
       interactSend(rtcEvent.cursorChange, interactBoard?.current?.getSelection())
-    // }, 100)
+    }, 100)
   }
 
   const onOtherCursorChange = (json) => {
@@ -454,15 +448,6 @@ const Fields = () => {
 
   const onOtherCameraChange = (json) => {
     otherCameraRef.current?.setCameraOff(json.data)
-  }
-
-  const onCameraSwitch = (e) => {
-    interactClose()
-    init({
-      url: `wss://${meetingStatus.ip}:${meetingStatus.port}/webrtc?code=${code}&access_token=${Model.session.getInfo()?.jwt?.access_token}`,
-      isCreator: Model.session.isMe(meetingStatus.creatorUUID),
-      cameraDeviceID: e
-    })
   }
 
   const onOtherVolumeChange = (e) => {
@@ -509,6 +494,7 @@ const Fields = () => {
   }
 
   const onNoteChange = (editor, data, value) => {
+    console.log("onNoteChange")
     interactSend(rtcEvent.note, value)
   }
 
@@ -535,6 +521,36 @@ const Fields = () => {
     })
   }
 
+  const onPullDocument = (json) => {
+    const content = json.data.content
+    client = new Client(json.data.version)
+    client.setCM(interactBoard?.current?.getCM())
+    if (Bee.StringUtils.isNotBlank(content)) {
+      interactBoard?.current?.setValue(content)
+      interactBoard?.current?.pulled(content)
+    } else {
+      const id = json.data.languageId ? json.data.languageId :typeID
+      interactBoard?.current?.setValue(placeholder[id - 1])
+      interactBoard?.current?.pulled(placeholder[id - 1])
+      client.applyClient(TextOperation.fromJSON([placeholder[id - 1]]))
+    }
+  }
+
+  const onPullNote = (json) => {
+    const note = Bee.StringUtils.isNotBlank(json.data.note)
+      ? json.data.note
+      : "# 会议笔记\n\n> 这里输入的文本仅自己可见（支持Markdown语法高亮）\n\n"
+    noteBoard?.current?.pulled(note)
+  }
+
+  const pullDocument = () => {
+    interactSend(rtcEvent.pullDocument, null)
+  }
+
+  const pullNote = () => {
+    interactSend(rtcEvent.pullNote, null)
+  }
+
   return loading ? <Page><Spinner style={{position: "absolute", top: "50%", left: "50%"}} /></Page> : (
     <>
       <Header ref={headerRef} width={1500} title="Interaction Fields" subtitle={["会议室", code]} />
@@ -554,7 +570,6 @@ const Fields = () => {
                           let del = 0 - length
                           let insert = placeholder[typeID - 1]
                           interactBoard?.current?.setValue(insert)
-                          setEditValue(placeholder[typeID - 1])
                           if (length === 0) {
                             client.applyClient(TextOperation.fromJSON([insert]))
                           } else {
@@ -580,7 +595,7 @@ const Fields = () => {
                 <Tabs initialValue="1">
                   <Tabs.Item label={<><Codepen />交互板</>} value="1" height="50px">
                     <div style={{display: "flex", flex: "1", height: "auto", padding: 24}}>
-                      <InteractBoard ref={interactBoard} editValue={editValue} language={language}
+                      <InteractBoard ref={interactBoard} pull={pullDocument} language={language}
                                      onChanges={onSelfEditChange}
                                      onChange={null}
                                      onCursorActivity={onSelfCursorChange} />
@@ -588,9 +603,10 @@ const Fields = () => {
                   </Tabs.Item>
                   <Tabs.Item label={<><FileText />笔记</>} value="2" height="50px">
                     <div style={{display: "flex", flex: "1", height: "auto", padding: 24}}>
-                      <InteractBoard editValue={noteValue} language={"markdown"}
-                                     onChange={onNoteChange} onCursorActivity={() => {
-                      }} />
+                      <InteractBoard ref={noteBoard} pull={pullNote} language={"markdown"}
+                                     onChange={onNoteChange}
+                                     onChanges={()=>{}}
+                                     onCursorActivity={()=>{}} />
                     </div>
                   </Tabs.Item>
                   <Tabs.Item label={<><Clock />运行记录</>} value="3" height="50px">
@@ -650,7 +666,6 @@ const Fields = () => {
                               userJoin={userJoin}
                               isSelf onMicChange={() => onSelfMicChange(selfCameraRef.current?.micOff)}
                               onCameraChange={() => onSelfCameraChange(selfCameraRef.current?.cameraOff)}
-                              onCameraSwitch={onCameraSwitch}
                               onOtherVolumeChange={onOtherVolumeChange} />
                   <Spacer w="24px" />
                   <CameraView ref={otherCameraRef} userJoin={userJoin} />
@@ -662,7 +677,6 @@ const Fields = () => {
                               userJoin={userJoin}
                               isSelf onMicChange={() => onSelfMicChange(selfCameraRef.current?.micOff)}
                               onCameraChange={() => onSelfCameraChange(selfCameraRef.current?.cameraOff)}
-                              onCameraSwitch={onCameraSwitch}
                               onOtherVolumeChange={onOtherVolumeChange} />
                 </>)}
               </div>

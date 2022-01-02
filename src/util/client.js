@@ -293,7 +293,7 @@ export default class Client {
 
   // Override this method.
   sendOperation(revision, operation) {
-    interactSend(rtcEvent.operation, {op: operation.ops, version: revision})
+    interactSend(rtcEvent.operation, {ops: operation.ops, version: revision})
   };
 
   // Override this method.

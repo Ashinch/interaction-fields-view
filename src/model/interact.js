@@ -36,6 +36,8 @@ export const rtcEvent = {
   languageChange: "languageChange",
   judgeResultReceive: "judgeResultReceive",
   operation: "operation",
+  pullDocument: "pullDocument",
+  pullNote: "pullNote",
   remind: "remind",
   hidden: "hidden",
   note: "note",
@@ -45,7 +47,6 @@ export const rtcEvent = {
 export const interactInit = ({
                                url,
                                isCreator,
-                               cameraDeviceID,
                                onConnected,
                                onDisconnected,
                                onRemoveDuplicateConnection,
@@ -55,6 +56,8 @@ export const interactInit = ({
                                onOtherMicChange,
                                onOtherCameraChange,
                                onOperation,
+                               onPullDocument,
+                               onPullNote,
                                onRemind,
                                onHidden,
                                onACK,
@@ -89,6 +92,12 @@ export const interactInit = ({
       case rtcEvent.operation:
         onOperation && onOperation(json)
         break
+      case rtcEvent.pullDocument:
+        onPullDocument && onPullDocument(json)
+        break
+      case rtcEvent.pullNote:
+        onPullNote && onPullNote(json)
+        break
       case rtcEvent.remind:
         onRemind && onRemind(json)
         break
@@ -122,12 +131,14 @@ export const interactInit = ({
         break
       default:
         pc && pc.setRemoteDescription(new RTCSessionDescription(json.data.sdp)).catch((error) => console.error('Failure callback: ' + error))
-        // if (json.event === rtcEvent.offer) {
-        pc && pc.createAnswer((desc) => {
-          pc.setLocalDescription(desc)
-          isWSReady() && interactSend(rtcEvent.answer, {"sdp": desc})
-        }, (e) => console.error(`createAnswer: ${e}`))
-      // }
+        console.log("signalingState", pc.signalingState)
+        // if (pc.signalingState === "stable") {
+          pc && pc.createAnswer((desc) => {
+
+            pc.setLocalDescription(desc)
+            isWSReady() && interactSend(rtcEvent.answer, {"sdp": desc})
+          }, (e) => console.error(`createAnswer: ${e}`))
+        // }
     }
   }
 
@@ -168,7 +179,7 @@ export const interactInit = ({
 
   // 如果检测到媒体流连接到本地，将其绑定到一个video标签上输出
   pc.onaddstream = (event) => {
-    console.info("onAddOtherStream")
+    console.info("onAddOtherStream", event.stream)
     onAddOtherStream && onAddOtherStream(event.stream)
     let upstreamBytesPrev = 0
     let upstreamBytesTimestampPrev = 0
@@ -218,51 +229,7 @@ export const interactInit = ({
   }
 
 
-  navigator.getUserMedia =
-    navigator.getUserMedia ||
-    navigator.webkitGetUserMedia ||
-    navigator.mozGetUserMedia ||
-    navigator.msGetUserMedia
-
-  navigator.getUserMedia({
-      audio: true,
-      video: {
-        width: 289,
-        height: 289,
-        deviceId: cameraDeviceID
-      },
-    },
-    (stream) => {
-      if (!isConnected) return
-      console.info("onAddSelfStream", stream)
-
-      // audioContext = new AudioContext()
-      // gainNode = audioContext.createGain();
-      // let audioSource = audioContext.createMediaStreamSource(stream);
-      // let audioDestination = audioContext.createMediaStreamDestination();
-      // audioSource.connect(gainNode);
-      // gainNode.connect(audioDestination);
-      // gainNode.gain.value = 1;
-      // console.log("audioDestination", audioDestination)
-
-      // rtcStream = audioDestination.stream
-      rtcStream = stream
-      onSelfMicChange(false)
-
-      onAddSelfStream && onAddSelfStream(rtcStream)
-      pc.addStream(rtcStream)
-      //如果是发起方则发送一个offer信令
-      // if (isCreator != null && !isCreator) {
-      pc.createOffer((desc) => {
-        // 发送offer和answer的函数，发送本地session描述
-        pc.setLocalDescription(desc)
-        isWSReady() && interactSend(rtcEvent.offer, {"sdp": desc})
-      }, (e) => console.error("PC createOffer is error: ", e))
-      // }
-    }, (error) => {
-      //处理媒体流创建失败错误
-      console.error('Call user media is error: ' + error)
-    })
+  getCamera("", onAddSelfStream)
 }
 
 export const interactSend = (event, data) => {
@@ -294,6 +261,54 @@ export const interactClose = (code = 3000) => {
   pc && pc.close()
   rtcStream && console.info("RTC close", rtcStream.getTracks())
   rtcStream && rtcStream.getTracks().forEach(i => i.stop())
+}
+
+export const getCamera = (deviceId, onAddSelfStream) => {
+  rtcStream && rtcStream.getTracks().forEach(i => i.stop())
+  navigator.getUserMedia =
+    navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia ||
+    navigator.msGetUserMedia
+
+  navigator.getUserMedia({
+      audio: true,
+      video: {
+        width: 289,
+        height: 289,
+        deviceId: deviceId
+      },
+    },
+    (stream) => {
+      if (!isConnected) return
+      // audioContext = new AudioContext()
+      // gainNode = audioContext.createGain();
+      // let audioSource = audioContext.createMediaStreamSource(stream);
+      // let audioDestination = audioContext.createMediaStreamDestination();
+      // audioSource.connect(gainNode);
+      // gainNode.connect(audioDestination);
+      // gainNode.gain.value = 1;
+      // console.log("audioDestination", audioDestination)
+      // rtcStream = audioDestination.stream
+      rtcStream = stream
+      onSelfMicChange(false)
+
+      onAddSelfStream && onAddSelfStream(rtcStream)
+      if (pc.connectionState === "connected" || pc.connectionState === "connecting") {
+        const videoSenders = pc.getSenders().filter((sender) => sender.track.kind === "video")
+        videoSenders[0].replaceTrack(rtcStream.getVideoTracks()[0])
+      } else {
+        pc.addStream(rtcStream)
+        pc.createOffer((desc) => {
+          // 发送offer和answer的函数，发送本地session描述
+          pc.setLocalDescription(desc)
+          isWSReady() && interactSend(rtcEvent.offer, {"sdp": desc})
+        }, (e) => console.error("PC createOffer is error: ", e))
+      }
+    }, (error) => {
+      //处理媒体流创建失败错误
+      console.error('Call user media is error: ' + error)
+    })
 }
 
 export const getDevices = (callback) => {

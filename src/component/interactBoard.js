@@ -25,19 +25,28 @@ import 'codemirror/mode/perl/perl.js'
 import 'codemirror/mode/clike/clike.js'
 
 export const InteractBoard = forwardRef(({
-                                    editValue,
-                                    language,
-                                    onChange,
-                                    onChanges,
-                                    onCursorActivity
-                                  }, ref) => {
+                                           pull,
+                                           language,
+                                           onChange,
+                                           onChanges,
+                                           onCursorActivity,
+                                         }, ref) => {
+
+  const [loading, setLoading] = useState(true)
+  const [editValue, setEditValue] = useState("")
   const codeMirrorRef = useRef()
 
   useEffect(() => {
     codeMirrorRef?.current?.editor.doc.cm.on("changes", onChanges)
+    pull && pull()
   }, [])
 
   useImperativeHandle(ref, () => ({
+    pulled: (value) => {
+      console.log("pulled", value)
+      setLoading(false)
+      setEditValue(value)
+    },
     getEditor: () => {
       return codeMirrorRef?.current?.editor
     },
@@ -68,6 +77,7 @@ export const InteractBoard = forwardRef(({
       codeMirrorRef?.current?.editor.doc.cm.getAllMarks().forEach(mark => mark.clear())
     },
     setOtherCursor: (selectionRange, color, word) => {
+      if (!selectionRange) return
       codeMirrorRef?.current?.editor.getAllMarks().forEach(item => item.clear())
       const cursorPos = selectionRange.to
       const anchor = selectionRange.from
@@ -145,6 +155,7 @@ export const InteractBoard = forwardRef(({
         ref={codeMirrorRef}
         value={editValue}
         options={{
+          readOnly: loading,
           lineNumbers: true,
           mode: {name: language},
           extraKeys: {
@@ -211,18 +222,20 @@ export const placeholder = [
   "}\n",
 
   // python2
+  "# coding=utf-8\n" +
   "\n" +
   "\"\"\"\n" +
   "Python2 环境版本: 2.7.18\n" +
-  "禁用文件读写，禁用系统调用\n" +
+  "禁用系统调用\n" +
   "\"\"\"\n" +
   "print 'Hello World'\n",
 
   // python3
+  "# coding=utf-8\n" +
   "\n" +
   "\"\"\"\n" +
   "Python3 环境版本: 3.9.5\n" +
-  "禁用文件读写，禁用系统调用\n" +
+  "禁用系统调用\n" +
   "\"\"\"\n" +
   "print('Hello World')\n",
 
@@ -235,7 +248,7 @@ export const placeholder = [
   "\n" +
   "/**\n" +
   " * C语言 环境版本: Alpine 10.3.1 2021042\n" +
-  " * 禁用文件读写，禁用系统调用\n" +
+  " * 禁用系统调用\n" +
   " */\n" +
   "int main()\n" +
   "{\n" +
@@ -249,7 +262,7 @@ export const placeholder = [
   "\n" +
   "/**\n" +
   " * C++ 环境版本: Alpine 10.3.1 2021042\n" +
-  " * 禁用文件读写，禁用系统调用\n" +
+  " * 禁用系统调用\n" +
   " */\n" +
   "int main()\n" +
   "{\n" +

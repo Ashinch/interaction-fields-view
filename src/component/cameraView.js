@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Camera, CameraOff, Mic, MicOff, Volume2, VolumeX } from '@geist-ui/react-icons'
 import "../util/bee.js"
 import { Avatar, Card, Select, Slider, Spacer, Text } from "@geist-ui/react"
-import { getDevices } from "../model/interact"
+import { getCamera, getDevices } from "../model/interact"
 import { Model } from "../model/model"
 import { getAvatarStyle } from "../util/hash"
 import UserX from "@geist-ui/react-icons/userX"
@@ -14,7 +14,6 @@ export const CameraView = forwardRef(({
                                         userJoin,
                                         onMicChange,
                                         onCameraChange,
-                                        onCameraSwitch,
                                         onOtherVolumeChange
                                       }, ref) => {
   const videoRef = useRef()
@@ -57,9 +56,10 @@ export const CameraView = forwardRef(({
   }
 
   const onSwitch = (e) => {
-    if (e === selectValue) return
-    setSelectValue(e)
-    onCameraSwitch && onCameraSwitch(e)
+    console.log("onCameraSwitch", e)
+    getCamera(e, (stream)=>{
+      videoRef.current.srcObject = stream
+    })
   }
 
   return (
