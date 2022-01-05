@@ -8,6 +8,7 @@ export class Session {
       mobile: mobile,
       email: email
     }).then(res => {
+      Reflect.set(res.data.jwt, "expireAt", (new Date().getTime() + res.data.jwt.expires_in * 1000))
       this.setInfo(res.data)
       resolve && resolve(res)
     }).catch(err => {
@@ -15,15 +16,63 @@ export class Session {
     })
   }))
 
-  logout = ({username, password}) => new Promise(((resolve, reject) => {
-    HTTP.delete(API.userLogout, {
-      username: username,
-      password: password,
-    }).then(res => {
-      this.clearInfo()
+  logout = () => new Promise(((resolve, reject) => {
+    HTTP.post(API.userLogOut).then(res => {
       resolve && resolve(res)
     }).catch(err => {
       reject && reject(err)
+    })
+  }))
+
+  session = () => new Promise(((resolve, reject) => {
+    HTTP.post(API.userSession).then(res => {
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    })
+  }))
+
+  offline = ({signature}) => new Promise(((resolve, reject) => {
+    HTTP.post(API.userOffline, {
+      signature: signature
+    }).then(res => {
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    })
+  }))
+
+  signUp = ({username, name, password, mobile, email}) => new Promise(((resolve, reject) => {
+    HTTP.post(API.userSignUp, {
+      username: username,
+      name: name,
+      password: password,
+      mobile: mobile,
+      email: email,
+    }).then(res => {
+      Reflect.set(res.data.jwt, "expireAt", (new Date().getTime() + res.data.jwt.expires_in * 1000))
+      this.setInfo(res.data)
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    })
+  }))
+
+  refreshToken = () => new Promise(((resolve, reject) => {
+    if (window.refreshingToken) return
+    window.refreshingToken = true
+    HTTP.post(API.userRefreshToken, {
+      refreshToken: this.getInfo()?.jwt?.refresh_token,
+    }).then(res => {
+      let temp = this.getInfo()
+      temp.jwt = res.data
+      Reflect.set(temp.jwt, "expireAt", (new Date().getTime() + res.data.expires_in * 1000))
+      this.setInfo(temp)
+      resolve && resolve(res)
+    }).catch(err => {
+      reject && reject(err)
+    }).finally(()=>{
+      window.refreshingToken = false
     })
   }))
 

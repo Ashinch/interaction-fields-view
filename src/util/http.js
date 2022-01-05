@@ -1,5 +1,6 @@
 import axios from 'axios'
 import * as QueryString from "querystring"
+import { Model } from "../model/model"
 
 export const HTTP = axios.create()
 
@@ -22,7 +23,19 @@ HTTP.interceptors.response.use(
   (data) => {
     console.info(data.config.method, data.config.url, data.data)
     if (data.data.code === 200) {
+      if (Model.session.isLogin() && data.config.url !== API.userRefreshToken
+        && Model.session.getInfo()?.jwt?.expireAt - new Date().getTime() < 1000 * 60 * 60 * 12) {
+        // 距离令牌过期时间小于12小时，刷新令牌
+        console.info("刷新令牌")
+        Model.session.refreshToken()
+      }
       return Promise.resolve(data.data)
+    } else if (data.data.code === 2005) {
+      // setTimeout(() => {
+      //   Model.session.clearInfo()
+      //   window.location.href = '/'
+      // }, 1000)
+      return Promise.reject(data.data)
     } else {
       console.error(data.data)
       return Promise.reject(data.data)
@@ -38,8 +51,11 @@ const PREFIX = '/api'
 
 export const API = {
   userLogin: PREFIX + '/user-service/login',
-  userLogout: PREFIX + '/user-service/logout',
+  userLogOut: PREFIX + '/user-service/logOut',
+  userSession: PREFIX + '/user-service/session',
+  userOffline: PREFIX + '/user-service/offline',
   userSignUp: PREFIX + '/user-service/signUp',
+  userRefreshToken: PREFIX + '/user-service/refreshToken',
   userEdit: PREFIX + '/user-service/edit',
   userChangePwd: PREFIX + '/user-service/changePwd',
   meetingCreate: PREFIX + '/meeting-service/create',

@@ -9,6 +9,7 @@ import Terminal from "@geist-ui/react-icons/terminal"
 import { SingleInputModal } from "./modal/singleInputModal"
 import { ChangePwdModal } from "./modal/changePwdModal"
 import "../util/bee.js"
+import { ActivitySessionRecord } from "./activitySessionRecord"
 
 const infoDict = {
   name: {
@@ -62,6 +63,7 @@ export const UserSettings = ({}) => {
       })
       .finally(() => {
         setInfoModalLoading(false)
+        window.location.reload()
       })
   }
 
@@ -104,9 +106,11 @@ export const UserSettings = ({}) => {
         <Fieldset.Content style={{display: "flex", alignItems: "center", paddingTop: 40, paddingBottom: 0}}>
           <Shield />
           <Spacer w={.5} />
-          <h4>安全</h4>
+          <h4>活动会话</h4>
         </Fieldset.Content>
         <Fieldset.Content>
+          <ActivitySessionRecord />
+          <Spacer h={1} />
           <Button auto type={"error"} ghost onClick={() => setPwdModal(true)}>更改密码</Button>
         </Fieldset.Content>
       </Fieldset>

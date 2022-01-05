@@ -5,9 +5,14 @@ import { forwardRef, useImperativeHandle, useState } from "react"
 import { getAvatarStyle } from "../util/hash"
 import { LoginModal } from "./modal/loginModal"
 import { CreateMeetingModal } from "./modal/createMeetingModal"
+import { ChangePwdModal } from "./modal/changePwdModal"
+import { SignUpModal } from "./modal/signUpModal"
+import { useHistory } from "react-router-dom"
 
 export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
+  const history = useHistory()
   const [loginVisible, setLoginVisible] = useState(false)
+  const [signUpVisible, setSignUpVisible] = useState(false)
   const [createVisible, setCreateVisible] = useState(false)
   const [disableBackdropClick, setDisableBackdropClick] = useState(false)
 
@@ -16,13 +21,19 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
       setLoginVisible(true)
       setDisableBackdropClick(true)
     },
+    showSignUp: () => {
+      setSignUpVisible(true)
+    },
     showCreate: () => {
       setCreateVisible(true)
     }
   }))
 
   const logout = () => {
-    Model.session.clearInfo()
+    Model.session.logout().finally(()=>{
+      Model.session.clearInfo()
+      history.push("/")
+    })
   }
 
   const popContent = () => (
@@ -40,7 +51,7 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
         <Link href="/personal/settings">账号设置&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</Link>
       </Popover.Item>
       <Popover.Item>
-        <Link href="/"
+        <Link href={null}
               onClick={logout}>退出&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</Link>
       </Popover.Item>
     </div>
@@ -98,7 +109,10 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
             </>
           ) : (
             <>
-              <Button auto type="abort">注册</Button>
+              <Button auto type="abort" onClick={() => {
+                setSignUpVisible(true)
+                setDisableBackdropClick(false)
+              }}>注册</Button>
               <Spacer w={1} />
               <Button auto type="secondary" onClick={() => {
                 setLoginVisible(true)
@@ -110,6 +124,7 @@ export const Header = forwardRef(({width, title, subtitle, shadow}, ref) => {
       </div>
 
       <LoginModal visible={loginVisible} setVisible={setLoginVisible} disableBackdropClick={disableBackdropClick} />
+      <SignUpModal visible={signUpVisible} setVisible={setSignUpVisible} />
 
       <CreateMeetingModal visible={createVisible} setVisible={setCreateVisible} />
 
